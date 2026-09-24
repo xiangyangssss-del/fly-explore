@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0a0e">
+<link rel="icon" href="favicon-32.png" sizes="32x32"><link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="果蝇探险">
+</head><body>
+<title>果蝇探险</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    color-scheme: dark;
+    --ground:#0b0a0e; --panel:#15131b; --line:#2b2735; --text:#ece6dc; --muted:#8f889c;
+    --sugar:#ffb44a; --bitter:#57c9a8; --wall:#2a2530; --floor:#17151d; --brain:#f9c54a; --rule:#8f889c;
+    --serif:"Noto Serif SC","Songti SC",serif;
+    --sans:"Noto Sans SC","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  }
+  html,body{background:var(--ground);color:var(--text)}
+  body{font-family:var(--sans);font-size:15px;line-height:1.55;margin:0;-webkit-tap-highlight-color:transparent;
+       padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+  .wrap{max-width:980px;margin:0 auto;padding-block:0 40px;display:grid;gap:10px}
+  /* 顶栏:一直在屏幕顶部;设置面板从它下面展开(浮在内容上,不改变顶栏高度 ⇒ 地图不跳) */
+  .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--ground);
+       display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:10px 8px}
+  .top h1{font-family:var(--serif);font-weight:900;font-size:clamp(22px,6vw,28px);margin:0;letter-spacing:.02em;white-space:nowrap}
+  .topbtns{display:flex;gap:8px}
+  .topbtns button{min-height:40px;padding:6px 12px;font-size:14px}
+  #bSet[aria-expanded="true"]{border-color:var(--sugar);color:var(--sugar)}
+  /* 设置:手机上从底部弹出(盖住卡片,地图照样看得见 ⇒ 改了立刻看到效果);宽屏上从右上角下拉(盖住右栏,不挡地图) */
+  /* 手机上:高度 = 地图下面剩下的空间(--mapB = 吸顶地图的下沿,JS 量的),最少 180px */
+  .setpanel{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));
+            bottom:calc(env(safe-area-inset-bottom,0px) + 10px);overflow:auto;box-sizing:border-box;
+            max-height:max(180px,calc(100vh - var(--mapB,60vh) - 20px - env(safe-area-inset-bottom,0px)));
+            max-height:max(180px,min(calc(100vh - var(--mapB,60vh) - 20px - env(safe-area-inset-bottom,0px)),calc(100svh - var(--mapB,60vh) - 20px - env(safe-area-inset-bottom,0px))));
+            background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px;
+            box-shadow:0 -8px 32px rgba(0,0,0,.6)}
+  /* 宽屏:和右栏一样宽(右栏 = (整行 − 10px) / 2.4),不伸进地图那一栏 */
+  @media (min-width:820px){ .setpanel{position:absolute;left:auto;right:0;bottom:auto;top:100%;width:max(300px,calc((100% - 10px) / 2.4));max-height:80vh;box-shadow:0 12px 32px rgba(0,0,0,.55)} }
+  .setpanel .ctrl{gap:6px}
+  .setpanel button,.setpanel select,.setpanel input{min-height:38px;padding:6px 10px;font-size:14px}
+  .setpanel label{font-size:12.5px;gap:0}
+  .sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sg{display:grid;gap:4px}
+  [hidden]{display:none!important}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .main{display:grid;grid-template-columns:1fr;gap:10px}
+  /* 地图一直看得见:手机上贴在顶栏下面(mapcol 用 display:contents,让 mapbox 的“吸附范围”是整列而不是它自己那一小块);
+     宽屏上整个左栏吸附 */
+  .mapcol{display:contents}
+  .mapbox{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px));z-index:20;
+          background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;min-width:0;
+          box-shadow:0 -10px 0 var(--ground)}   /* 盖住顶栏和地图之间的缝,别让下面的卡片从缝里透出来 */
+  /* 画布填满整个框:宽度 100%,高度 = min(宽度, 半屏)。窄屏是正方形;又宽又矮的窗口是长方形,默认缩放照样装下整张图,放大后用满整个框 */
+  #map{width:100%;aspect-ratio:1;max-height:min(48vh,48svh);display:block;border-radius:8px;touch-action:pan-y;cursor:zoom-in}
+  #map.zoomed{touch-action:none}                       /* 没放大时手指在地图上竖着滑 = 滚页面;放大后才由地图接管拖动 */
+  #map.zoomed{cursor:grab}
+  #map.zoomed:active{cursor:grabbing}
+  /* 按钮条在画布下面单独一行 —— 叠在地图上会永远挡住右下角那一片(拖都拖不出来) */
+  .mapctl{display:flex;align-items:center;gap:6px;margin-top:6px}
+  .mapctl #zLvl{font-family:var(--mono);min-width:3.2em}
+  .mapctl .zhint{margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .mapctl button{min-width:40px;min-height:38px;padding:4px 10px;font-size:16px;line-height:1}
+  @media (max-width:440px){ .mapctl .zhint{display:none} .mapctl #zLvl{margin-right:auto} }
+  .mapctl button:disabled{opacity:.35;cursor:default}
+  #zFol[aria-pressed="true"]{border-color:var(--sugar);color:var(--sugar)}
+  @media (min-width:820px){
+    .main{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:start}
+    .mapcol{display:grid;gap:8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px))}
+    .mapbox{position:static;top:auto;box-shadow:none}
+    #map{max-height:calc(100vh - var(--topH,56px) - 150px)}   /* 留出下面的按钮行和图例 */
+  }
+  .side{display:grid;gap:8px;min-width:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px;min-width:0}
+  /* 卡片:收起 = 标题 + 主图;点开 = 全部内容 */
+  .card:not(.open){cursor:pointer}
+  .card:not(.open) .more{display:none}
+  .more{display:grid;gap:8px;min-width:0}
+  .ch{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:28px;border-radius:6px}
+  .ch:focus-visible{outline:2px solid var(--sugar);outline-offset:2px}
+  .ch::after{content:"▾";color:var(--muted);font-size:13px;transition:transform .15s}
+  .ch > :nth-child(2){margin-left:auto}                /* 标签和 ▾ 一起靠右 */
+  .card.open .ch::after{transform:rotate(180deg)}
+  .img{width:100%;height:auto;max-width:100%;display:block}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .tag.brain{color:var(--brain);border-color:#5a4a1f}
+  .tag.rule{color:var(--rule)}
+  .state{font-family:var(--serif);font-weight:900;font-size:22px}
+  .meter{height:10px;background:#0f0e13;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .meter i{display:block;height:100%;width:0;background:var(--sugar);transition:width .15s linear}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .small{font-size:12.5px;color:var(--muted)}
+  .ebrow{display:grid;grid-template-columns:84px 1fr;gap:10px;align-items:center}
+  #eb{width:84px;height:84px}
+  .ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button,input,select{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  button{cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--sugar);outline-offset:2px}
+  button[aria-pressed="true"]{border-color:var(--sugar);color:var(--sugar)}
+  #seed{width:7.5em}
+  label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+  input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--sugar);width:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11.5px;line-height:1.35;color:var(--muted);padding-inline:2px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .legend .lg2{color:var(--text);opacity:.7}
+  .log{font-size:13px;color:var(--muted);display:grid;gap:3px;max-height:16em;overflow:auto}
+  .card:not(.open) .log{max-height:1.45em;overflow:hidden}      /* 收起时只露最新一条 */
+  .ctrl button,.ctrl select,.ctrl input{min-height:44px}
+  .log b{color:var(--text);font-weight:500}
+  .note{color:var(--muted);font-size:13.5px;max-width:70ch}
+  .note h2,.note h3{font-family:var(--serif);font-size:17px;color:var(--text);margin:14px 0 6px}
+  .note ul{margin:0 0 9px;padding-left:1.2em}
+  .note li{margin:0 0 4px}
+  .note a{color:var(--sugar)}
+  dialog#info{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:0;
+              width:min(760px,calc(100% - 24px));max-height:min(88vh,88svh);overflow:auto}
+  dialog#info::backdrop{background:rgba(5,4,8,.72)}
+  .dhead{position:sticky;top:0;background:var(--panel);display:flex;align-items:center;justify-content:space-between;gap:10px;
+         padding:12px 16px;border-bottom:1px solid var(--line);z-index:1}
+  .dhead h2{font-family:var(--serif);font-weight:900;font-size:20px;margin:0}
+  .dhead button{min-width:44px;min-height:44px;padding:0}
+  dialog#info .note{padding:4px 18px 20px;max-width:none}
+  .note p{margin:0 0 9px}
+  table{border-collapse:collapse;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+  td,th{padding:3px 7px;text-align:right;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:400}
+  .tw{overflow-x:auto}
+  .div{position:relative;height:14px;background:#0f0e13;border-radius:7px;border:1px solid var(--line);overflow:hidden}
+  .div i{position:absolute;top:0;bottom:0;background:var(--text)}
+  .div .mid{left:50%;width:1px;background:var(--muted)}
+  .div .thr{width:1px;background:#5a4a1f}
+  .scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <div class="top" id="top">
+    <h1>果蝇探险</h1>
+    <div class="topbtns">
+      <button id="bInfo" aria-haspopup="dialog">ⓘ 说明</button>
+      <button id="bSet" aria-expanded="false" aria-controls="setPanel">⚙ 设置</button>
+    </div>
+    <div class="setpanel" id="setPanel" hidden role="region" aria-label="设置">
+      <div class="sg"><div class="eyebrow">地图</div>
+        <div class="ctrl"><input id="seed" inputmode="numeric" aria-label="地图种子" value="20260924"><button id="bNew">生成地图</button><button id="bRand">随机种子</button></div></div>
+      <div class="sg"><div class="eyebrow">运行 · 太阳 · 学习</div>
+        <div class="ctrl"><button id="bPause">暂停</button><select id="spd" aria-label="速度"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select><button id="bSun" aria-pressed="true">☀ 太阳：开</button><button id="bLearn" aria-pressed="true">学习：开</button><button id="bForget">清空记忆</button></div></div>
+      <div class="sliders">
+        <label for="sunAz">太阳方位 <input id="sunAz" type="range" min="-180" max="180" value="60"></label>
+        <label for="windAz">风向（空气往哪吹） <input id="windAz" type="range" min="-180" max="180" value="-90"></label></div>
+      <div class="sg"><div class="eyebrow">显示</div>
+        <div class="ctrl"><button id="bOdor" aria-pressed="true">显示气味雾</button><button id="bTaste" aria-pressed="true">复眼里标出糖苦</button></div></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="mapcol">
+      <div class="mapbox">
+        <canvas id="map" width="768" height="768" aria-label="地图（可拖动、双指或滚轮缩放、双击放大）"></canvas>
+        <div class="mapctl" role="toolbar" aria-label="地图视图">
+          <span class="small" id="zLvl" aria-live="polite">×1.0</span><span class="small zhint">拖动 · 双指/滚轮缩放 · 双击放大</span>
+          <button id="zIn" aria-label="放大">＋</button><button id="zOut" aria-label="缩小">−</button><button id="zFit" aria-label="复位：看整张地图">⤢</button><button id="zFol" aria-pressed="false">◎ 跟随</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--sugar)"></i>糖</span><span><i style="background:var(--bitter)"></i>苦（霉斑）</span><span><i style="background:#b98ad8"></i>坏果子（甜＋苦）</span><span><i style="background:#4a4354"></i>墙</span><span>◌ 它以为的食物</span>
+        <span class="lg2">气味雾</span><span><i style="background:rgba(255,205,110,.55)"></i>醋味</span><span><i style="background:rgba(110,225,200,.55)"></i>霉味</span><span><i style="background:rgba(205,150,255,.55)"></i>坏果子的果香</span><span>左上角箭头 = 风往哪吹</span>
+      </div>
+    </div>
+
+    <div class="side">
+      <section class="card" data-card="state">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">正在做</span><span class="tag rule" id="stTag">⚙ 规则</span></button>
+        <div class="state" id="state">探索</div>
+        <div class="more"><div class="small" id="stWhy">沿着相对太阳的一个固定角度走直线</div></div>
+      </section>
+
+      <section class="card" data-card="eye">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">视觉 · 果蝇看到的</span><span class="tag brain">🧠 小眼位置来自数据</span></button>
+        <canvas id="eye" width="640" height="330" aria-label="复眼视野" class="img"></canvas>
+        <div class="scale"><span>← 左眼</span><span>正前</span><span>右眼 →</span></div>
+        <div class="more">
+          <div class="small"><b style="color:#f9c54a">黄虚线</b> = 它想去的方向（FC2 上的目标）　<b style="color:#8fd3ff">蓝虚线</b> = 上风。地上的<b style="color:#ffb44a">橙</b>/<b style="color:#57c9a8">青</b>色块是糖/苦——<b>只给你看</b>：糖水无色无形，果蝇的眼睛分不出糖和苦，远处靠闻、脚下靠尝。</div>
+          <div class="row small"><span>ER 环神经元（103 个，按偏好方向排）</span><span class="tag brain">🧠 接线图感受野</span></div>
+          <canvas id="erbar" width="640" height="26" aria-label="ER 神经元活动" class="img" style="border-radius:4px"></canvas>
+          <div class="small">1,581 个小眼。每个 ER 神经元“看”的方向，是沿 光感受器→延髓→MeTu→TuBu→ER 的连接一跳一跳算出来的。</div>
+        </div>
+      </section>
+
+      <section class="card" data-card="olf">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">嗅觉 · 触角 → 触角叶</span><span class="tag brain">🧠 全脑模拟（修正版）</span></button>
+        <canvas id="glom" width="640" height="118" aria-label="嗅小球投射神经元活动" class="img"></canvas>
+        <div class="row small"><span id="oSmell">没闻到</span><span class="num" id="oKC">KC 0%</span></div>
+        <div class="more">
+          <div class="row small"><span>醋味 ORN（左 / 右触角）</span><span class="num" id="oA">0 / 0 Hz</span></div>
+          <div class="meter"><i id="oAb" style="background:#ffcd6e"></i></div>
+          <div class="row small"><span>苯乙醛 ORN（坏果子的果香）</span><span class="num" id="oC">0 Hz</span></div>
+          <div class="meter"><i id="oCb" style="background:#cd96ff"></i></div>
+          <div class="row small"><span>霉味 ORN（geosmin → DA2）</span><span class="num" id="oB">0 Hz</span></div>
+          <div class="meter"><i id="oBb" style="background:#6ee1c8"></i></div>
+          <div class="row small"><span>左右触角差 → 转向偏置</span><span class="num" id="oTrop">0.00</span></div>
+          <div class="small">柱子是各嗅小球投射神经元（PN）的放电率：黄 = 醋味，紫 = 苯乙醛，青 = 霉味。偏置方向（往气味浓的那侧转）来自接线图路径权重（同侧强 4 倍）；力度是调的，而且在这张 2 mm 一格的地图上两根触角只差几个百分点，所以它很弱——主要还是靠逆风追。</div>
+        </div>
+      </section>
+
+      <section class="card" data-card="mb">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">学习 · 蘑菇体</span><span class="tag brain">🧠 KC 编码 + 接线</span></button>
+        <canvas id="mbHist" width="640" height="130" aria-label="学习曲线" class="img"></canvas>
+        <div class="row small"><span><b style="color:#ffcd6e">醋味</b> U <b class="num" id="mUA">+1.00</b></span><span><b style="color:#cd96ff">苯乙醛</b> U <b class="num" id="mUC">+1.00</b></span></div>
+        <div class="more">
+          <div class="small">U = 天生的吸引 +1 ＋ 2 × 蘑菇体学到的偏好。虚线：≥ 0.3 追，≤ −0.3 躲，中间不理。</div>
+          <canvas id="mbComp" width="640" height="118" aria-label="各隔室突触剩余" class="img"></canvas>
+          <div class="small">每个隔室两根柱：这种气味的 KC 到该隔室 MBON 的突触还剩多少（满格 = 没学过）。白字隔室有独立实验证据，灰字只是推断。开关和清空记忆在右上角 ⚙ 设置里。</div>
+          <div class="row small"><span id="mCount">惩罚 0 次 · 奖励 0 次</span><span class="num" id="mKC">KC 0 / 5177</span></div>
+        </div>
+      </section>
+
+      <section class="card" data-card="taste">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">脚下的味道 → 进食神经元</span><span class="tag brain">🧠 全脑模拟</span></button>
+        <div class="row small"><span>糖 <b class="num" id="tS">0</b> Hz · 苦 <b class="num" id="tB">0</b> Hz</span><span class="num" id="tR">0 Hz</span></div>
+        <div class="meter"><i id="tBar"></i></div>
+        <div class="row small"><span>饥饿</span><span class="tag rule">⚙ 规则</span></div>
+        <div class="meter"><i id="hBar" style="background:#e58a6e"></i></div>
+        <div class="more"><div class="small">上面那条是进食运动神经元（CB0700/CB0701）的放电率，超过 60 Hz 伸口器进食。饥饿靠激素和神经调质，接线图里没有，所以是规则。</div></div>
+      </section>
+
+      <section class="card" data-card="compass">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">脑内指南针</span><span class="tag brain">🧠 接线图</span></button>
+        <div class="ebrow">
+          <canvas id="eb" width="220" height="220" aria-label="EPG 环"></canvas>
+          <div class="more" style="gap:4px">
+            <div class="row"><span class="small">真实朝向</span><span class="num" id="rH">0°</span></div>
+            <div class="row"><span class="small">脑内估计</span><span class="num" id="rE">0°</span></div>
+            <div class="row"><span class="small">指南针偏差</span><span class="num" id="rErr">0°</span></div>
+            <div class="row"><span class="small">以为的位置偏差</span><span class="num" id="rPos">0</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" data-card="steer">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">转向电路 FC2 → PFL3 → DNa02</span><span class="tag brain">🧠 接线图</span></button>
+        <div class="div" aria-hidden="true"><i class="thr" id="thrL"></i><i class="thr" id="thrR"></i><i class="mid"></i><i id="dDb"></i></div>
+        <div class="scale"><span>← 左转</span><span>门槛 ±4 内直走</span><span>右转 →</span></div>
+        <div class="more">
+          <div class="row small"><span>DNa02 左</span><span class="num" id="dL">0</span></div>
+          <div class="meter"><i id="dLb" style="background:#5fb8e8"></i></div>
+          <div class="row small"><span>DNa02 右</span><span class="num" id="dR">0</span></div>
+          <div class="meter"><i id="dRb" style="background:#ec7aa2"></i></div>
+          <div class="row small"><span>转向信号 = 左 − 右</span><span class="num" id="dD">0</span></div>
+          <div class="small" id="perf">—</div>
+        </div>
+      </section>
+
+      <section class="card" data-card="log">
+        <button class="ch" aria-expanded="false"><span class="eyebrow">日志</span><span class="small">点开看最近 30 条</span></button>
+        <div class="log" id="log"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<dialog id="info" aria-labelledby="infoT">
+  <div class="dhead"><h2 id="infoT">哪些是大脑，哪些是规则</h2><button id="bInfoX" aria-label="关闭">✕</button></div>
+  <div class="note">
+<p>每个种子一张新地图：石墙、<b style="color:var(--sugar)">好糖</b>（散发醋味）、<b style="color:#b98ad8">坏果子</b>（甜里掺苦，散发另一种果香——苯乙醛）、<b style="color:var(--bitter)">霉斑</b>（苦，散发霉味）。果蝇靠脑内指南针走直线、闻着气味找吃的、尝味道决定吃不吃、吃完在附近兜圈找，还会<b>记住哪种气味跟着苦</b>，下次闻到就绕开。关掉太阳，看它怎么迷路。</p>
+<p>页面上每张卡片的标签说明它从哪来：<span class="tag brain">🧠</span> 是从 FlyWire 接线图或用接线图搭的全脑模型算出来的；<span class="tag rule">⚙</span> 是按行为学论文写的规则，接线图决定不了。</p>
+
+<h3>🧠 来自接线图的部分</h3>
+<p><b style="color:var(--brain)">指南针</b>：FlyWire 中央复合体 151 个神经元（EPG 47、Δ7 42、PEN 42、PEG 20）按接线搭的环形吸引子。它看不到真实朝向，只看得到自己的估计——所以关灯后它会把路走弯。它还用这个估计做路径积分，记住“食物在哪”。</p>
+<p><b style="color:var(--brain)">转向</b>：规则只决定“想去哪”，这个目标以一个活动峰的形式放到 83 个 FC2 神经元上；往左还是往右转，由 24 个 PFL3 神经元把“目标”与指南针的“当前朝向”相比，再经交叉投射驱动左右两个 DNa02 下行神经元决定。数据里量到 FC2 给两侧 PFL3 的输入分别偏 ±45°——正是这个偏移让电路会“朝目标转”。按文献把 DNa02 接成同侧转身，环路自动收敛到目标方向；它从来没被告知要这样。</p>
+<p><b style="color:var(--brain)">视觉</b>：1,581 个小眼的位置来自 Visual Neuron Columns 文件。哪个轴是上下，是用背缘区（DRA，感受偏振天光的那圈小眼）定的——它们集中在一端，那端就是背侧。103 个 ER 环神经元的感受野沿 光感受器→延髓→MeTu→TuBu→ER 的连接逐跳算出，<b>全部落在同侧</b>，与活体记录（Seelig &amp; Jayaraman 2013）一致。</p>
+<p><b style="color:var(--brain)">嗅觉</b>：醋味对应 7 个嗅小球（DM1、VA2 是吸引必需的，另有 DM4、DP1m、DM2、VM2、DM3，按 Semmelhack &amp; Wang 2009），苯乙醛主要是 DM6、VL2a、DL1 等，霉味只对应 DA2（Stensmyr 2012）。两根触角各读一个浓度 → 嗅觉感受神经元（ORN）放电 → 触角叶投射神经元（PN）反应，后者用全脑模型离线算好查表：分级的、气味专一的，还自带嗅小球之间的侧抑制。</p>
+<p><b style="color:var(--brain)">味觉取舍</b>：用全脑 139,255 个神经元、373 万条连接的漏积分放电模型离线跑出来的查表：刺激 129 个糖/水味觉神经元和 65 个苦味神经元，看进食运动神经元（CB0700/CB0701）的放电率。</p>
+<div class="tw" id="tbl"></div>
+<p style="margin-top:8px"><b style="color:var(--brain)">学习（蘑菇体）</b>：每种气味在不同浓度下点亮哪些 Kenyon 细胞（KC）、每个 KC 给各隔室的输出神经元（MBON）多少个突触，都来自接线图和全脑模型：591 个 KC、53 个 MBON、3,230 条 KC→MBON 连接。醋味在 100 Hz 时点亮 297 个 KC（全部 5,177 个里的 5.7%，真果蝇是 5~10%），苯乙醛点亮 39 个，两组几乎不重叠——所以它能分别记住两种气味，惩罚一种不会连累另一种。</p>
+
+<h3>⚙ 规则</h3>
+<p><b>行为</b>（按果蝇行为学论文写，不是从接线图算的）：隔几秒换一个想去的方向、撞墙时换目标、吃完后来回折返的局部搜索、转身时放慢、饥饿。饥饿靠激素和神经调质，接线图里没有；走路的电路在腹神经索，这份数据也不含。</p>
+<p><b>气味</b>：饿着闻到“想追”的气味 → 朝上风走；气味断了 → 垂直风向左右扫、越扫越宽；闻到霉味 → 走开，而且不进食、正在吃也停下（Álvarez-Salvado 2018；Stensmyr 2012）。躲的时候（天生怕霉味和学来的躲避都一样），离源头很近就背着气味变浓的方向走；远处的话，霉味往下风走，学来的躲避斜着横穿出羽流——苯乙醛的羽流顺风拖得很长，往下风走等于一直在里面。接线图里找得到“风感受器 → 中央复合体”的通路，但决定不了它指向逆风还是顺风，所以方向是规则。目标仍然交给 FC2 → PFL3 → DNa02 去转。</p>
+<p><b>学习</b>：尝到苦 → 惩罚型多巴胺神经元（PPL1）→ 把最近 6 秒内亮过的 KC 到“趋近”MBON 的突触按比例压低；吃到糖 → 奖励型（PAM）→ 压低到“回避”MBON 的突触，强度随饥饿（Hige 2015；Aso &amp; Rubin 2016）。之后突触慢慢恢复：γ 隔室约 10 分钟、α2 和 β1 约 30 分钟；α1、α3 设成不恢复（当作长期记忆，这是推断），所以学得多了 U 回不到 +1，会停在 +0.6 左右——仍在“追”的范围里。读数 U = 天生的吸引（+1）＋ 2 × 学到的偏好：U ≥ 0.3 追，U ≤ −0.3 躲，中间不理。读数固定用 100 Hz 那一档的 KC（这种气味的“身份”），不随浓度换组。全脑模型里糖/苦味觉神经元点不亮多巴胺神经元，所以“味觉 → 多巴胺”这一步是规则。</p>
+
+<h3>实测效果</h3>
+<p>全部在 node 里跑同一份代码。</p>
+<p><b>学会躲坏果子</b>（类似真实实验里的 T 迷宫）：饿着的果蝇放在坏果子下风 5~14 格处，看 20 秒内会不会走过去。每种条件 150 次（15 张图 × 10 个起点；还有一张图找不到合格的起点，跳过了）。</p>
+<div class="tw"><table><tr><th style="text-align:left">条件</th><th>苯乙醛的 U</th><th>20 秒内走到</th></tr><tr><td style='text-align:left'>闻不到（瞎走的底数）</td><td>—</td><td>33%</td></tr><tr><td style='text-align:left'>没学过</td><td>+1.00</td><td>80%</td></tr><tr><td style='text-align:left'>罚 1 次</td><td>+0.22</td><td>37%</td></tr><tr><td style='text-align:left'>罚 2 次</td><td>-0.20</td><td>37%</td></tr><tr><td style='text-align:left'>罚 3 次</td><td>-0.44</td><td>25%</td></tr><tr><td style='text-align:left'>罚 3 次，等 15 分钟</td><td>+0.52</td><td>80%</td></tr><tr><td style='text-align:left'>罚 3 次，等 30 分钟</td><td>+0.76</td><td>80%</td></tr></table></div>
+<p style="margin-top:8px">没学过时明显被果香吸引（比瞎走多得多）；罚过之后被吸引的效果没了，走到的比例降到和瞎走差不多——罚 3 次时比瞎走还低一点，但这个差别在统计上不显著（配对检验 p≈0.13），能直接证明它在“躲”的是另一件事：罚 3 次的 150 次里有 144 次出现了主动躲开。15 分钟后就忘了，又回到被吸引。</p>
+<p><b>在地图里连续活 30 分钟</b>（16 张图，只数站在坏果子上尝到的那几次，发霉的好糖另算）：学习开时尝到坏果子 <b>200</b> 次、学习关 <b>473</b> 次；被坏果子的果香骗过去追 <b>27</b> 次 vs <b>153</b> 次；进食 1400 vs 1334 次。逐张图看并不整齐：10 张学习开时尝得更少、2 张一样、4 张反而更多——同一张图开/关学习后轨迹很快分叉，单张图的波动很大，要看总数。</p>
+<p><b>醋味有没有被连累</b>：会，但几乎都是<b>霉斑</b>造成的，不是坏果子。霉斑可以长在糖上或糖旁边，踩到它尝到苦的那一刻正闻着醋味，醋味就跟着被记坏一点，吃到糖再补回来。坏果子离好糖够远：在醋味掉得最低的 3 张图里，46 次坏果子惩罚只有 1 次闻得到醋味。每一步都记下来的话，16 只里醋味 U 的最低值是 <b>0.21</b>；有 3 只曾掉到 0.3 以下（那段时间它不追醋味），加起来 85 秒 / 共 480 分钟。</p>
+<p><b>远处出发找食物</b>（离所有糖 ≥ 12 格，160 次）：关嗅觉中位 23.9 秒（90 秒没找到 30 次）；开嗅觉、没学过 27.5 秒（28 次）；开嗅觉、学过 23.4 秒（24 次）。<b>如实说：嗅觉在这项上帮助不大，学没学过也看不出差别。</b>学过和没学过是同一批起点配对跑的：160 对里 117 对用时完全一样，剩下的 22 对学过的更快、21 对更慢——中位数那点差别只是少数几次拉出来的。（以前的版本在 4 张图上测过嗅觉帮助更大，25.6 vs 38.9 秒，那时坏果子紧挨着好糖，追错了也能顺带吃到；地图规则改了以后这个便宜没了。）学习省下的是反复回去尝坏果子的时间，而不是第一次找到食物的时间。</p>
+<p>卡死保护（6 秒没走出 0.3 格就强制换方向）在 8 只 × 15 分钟里触发 0 次。</p>
+
+<h3>简化与假设</h3>
+<p>全脑模型里，触角叶有 176 个没有递质标注的局部神经元被当成抑制性（默认当兴奋性会让任何气味点燃整个触角叶；它们大多确实是抑制性的，但这是假设）。全脑模型的突触强度统一乘了 0.4——照抄论文的 0.275 mV 在这个实现里会整脑失控。指南针按角度平均、左右对称化、三个全局增益是调出来的。太阳信号仍直接加在 EPG 上：真果蝇里 ER→EPG 的对应关系是靠可塑性学出来的（Fisher 2019、Kim 2019），我实现的学习版在测试里不稳定，所以还没接上指南针。视觉的“哪头朝前”数据没给，是假设的。转身信号直接加在 PEN 上。</p>
+<p><b>蘑菇体</b>：投射神经元 → KC 的突触乘了 2——不乘的话苯乙醛只点亮 1~3 个 KC，根本学不了；乘了之后醋味点亮 5.7%，落在真果蝇的范围里。全脑模型里醋味让 MBON 的放电率是 0，所以读数用的是“突触驱动”的线性加权，不是 MBON 放电。9 个隔室里 γ1pedc、γ2、γ4、γ5、β′2 五个的多巴胺来源和效价有实验证据；α1、α2、α3、β1 四个是推断（界面上灰字），它们的学习率和恢复时间都是设的。站在气味源上时，羽流模型读到的浓度偏低（源头也一阵有一阵无），所以另加了一个“近场”：至少闻到源强 ÷ 100。它只用在两处——喂蘑菇体，以及躲的时候在源头边上判断往哪边走开；“闻到没有”和追味用的仍然只是羽流（试过把近场加进去，远处找食物从 39 秒变 55 秒）。坏果子离好糖中心 ≥ 12 格是地图规则（尽量满足：随机 400 次都放不下时取离好糖最远的点）：挨着的话，尝到坏果子时醋味也很浓，醋味会一起被记坏。霉斑随便放，可以压在糖上（= 发霉的糖）。</p>
+
+<h3>数据来源</h3>
+<ul>
+<li><b>FlyWire 全脑接线图</b>（Codex 下载页的公开数据）：<span class="num">neurons</span>（神经元与递质预测）、<span class="num">connections_princeton</span>（突触连接）、<span class="num">consolidated_cell_types</span>、<span class="num">classification</span>、<span class="num">names</span>（细胞类型与分类）、<span class="num">column_assignment</span>（Visual Neuron Columns，小眼列位置）。Dorkenwald et al. 2024；Schlegel et al. 2024（Nature）。</li>
+<li><b>全脑漏积分放电模型</b>的做法：Shiu et al. 2024（Nature）。</li>
+<li><b>中央复合体与指南针</b>：Seelig &amp; Jayaraman 2013、2015；Hulse et al. 2021；Fisher et al. 2019；Kim et al. 2019。转向：Westeinde et al. 2024；Rayshubskiy et al.（DNa02）。</li>
+<li><b>嗅觉</b>：Semmelhack &amp; Wang 2009（醋味嗅小球）；Stensmyr et al. 2012（geosmin → DA2）；Álvarez-Salvado et al. 2018（步行果蝇逆风追踪）。</li>
+<li><b>应用图标里的果蝇照片</b>：「Портрет дрозофилы」（Portrait of fruit fly），Грибков Михаил 摄，<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>，来自维基共享资源；裁成方形，右半边改成了数字线框。</li>
+<li><b>蘑菇体学习</b>：Aso et al. 2014（隔室、DAN、MBON 图谱）；Aso &amp; Rubin 2016；Hige et al. 2015（多巴胺门控的突触压低）；Das et al. 2014（糖奖励与苦惩罚走蘑菇体）。</li>
+</ul>
+  </div>
+</dialog>
+
+<script>/* plume.js — fast 2-D odor plume, 3 channels (A, B, C), for the fly game. Plain ES2020 script, no imports;
+ * everything is on the single global object PLUME.   Browser: <script src="olf/plume.js"><\/script>   Node: require('./plume.js').
+ *
+ * ── API ───────────────────────────────────────────────────────────────────────────────────────────────
+ * PLUME.init(world, opts?)  world = {G?, wall, sug, bit, bad?} as genWorld() returns it (k = y*G + x; G defaults
+ *                           to √N; wall Uint8Array 1 = wall; sug/bit/bad Float32Array strength 0..200; bad is
+ *                           optional — without it C stays 0, is not computed, and A/B are bit-identical to the
+ *                           2-channel plume.js for the same seed). The arrays are read
+ *                           BY REFERENCE every step: eating sugar lowers emission at once; a tile that becomes a
+ *                           wall loses its odor. Resets fields, wind and RNG. Returns PLUME.opts (live: edit any
+ *                           field later, e.g. PLUME.opts.decay = 0.2). Defaults: DEFAULTS below.
+ * PLUME.step(dt)            advance dt s of sim time (≤ 1 s per call). Runs whole internal steps of opts.h (1/60 s)
+ *                           and carries the remainder ⇒ frame-rate independent, bit-identical for the same seed and
+ *                           the same total time. Call once per frame with dtF·speed (calling it every 2 ms fly step
+ *                           also works — most calls then do nothing). Returns the number of internal steps run.
+ * PLUME.sample(x, y)     -> {A, B, C}  concentration at a continuous position (tiles, world frame below), bilinear
+ *                           over tile centres. 0 inside a wall tile; next to walls only air tiles are used (a wall
+ *                           does not pull the reading down ⇒ no fake gradient pointing away from walls).
+ * PLUME.grad(x, y)       -> {A, B, C, Ax, Ay, Bx, By, Cx, Cy}  value and gradient (per tile) of that same interpolant.
+ * PLUME.antennae(x, y, heading, sep = 0.15)   (x, y) = point midway between the antennae (the game draws the head
+ *                           8 px = 0.67 tile ahead of fly.x/y along fly.h); sep 0.15 tile = 0.3 mm.
+ *                        -> {A, B, C, AL, AR, BL, BR, CL, CR, dA, dB, dC, dAg, dBg, dCg}
+ *                           dA = AL − AR from two samples; dAg = sep·(∇A · left unit vector), the gradient-based
+ *                           estimate (smooth across tile-centre lines; prefer it, see LIMITS). Left = heading + π/2.
+ * PLUME.setWind(angle, speed?)  mean wind: direction the air moves TOWARD (rad, same frame as fly.h / sunAz),
+ *                           speed in tiles/s (0 = still air, no eddies). Resets the slow wander offset to 0.
+ * PLUME.wind()           -> {ux, uy, angle, speed, baseAngle, baseSpeed}  uniform part (base + wander), last step.
+ * PLUME.windAt(x, y)     -> {ux, uy}  local air velocity incl. eddies (what the fly's antennae would feel).
+ * PLUME.render(rgba, W = 768, H = W, style?)  paint all three channels into an ImageData.data-like RGBA buffer,
+ *                           non-premultiplied, alpha 0 where there is no odor, rows flipped like the game's
+ *                           paintTile (tile row G-1 at the top). Any W×H; 768² ≈ 0.2 ms. Cheapest: render(d, 64, 64)
+ *                           into a 64×64 canvas and drawImage() it scaled onto the map (the browser smooths it).
+ *                           style = {sA, sB, sC, alpha, colA, colB, colC}: channel alpha = c/(c + s) (s defaults
+ *                           0.5), colours [r, g, b] (defaults amber / teal / violet); the colour is the alpha-weighted
+ *                           mean, total alpha = alpha·(1 − Π(1 − channel alpha)).
+ * PLUME.stats()          -> {t, massA, massB, massC, emittedA, emittedB, emittedC, decayedA, decayedB, decayedC}
+ *                           cumulative since init; emitted − decayed − mass = odor absorbed by walls / carried off
+ *                           the map (never < 0).
+ * PLUME.A, PLUME.B, PLUME.C  the fields, Float32Array(G*G), value per tile centre (treat as read-only).
+ *
+ * ── Frame & units ─────────────────────────────────────────────────────────────────────────────────────
+ * Tile (x, y) covers [x, x+1) × [y, y+1), value at its centre (x+.5, y+.5); y points up (the game draws row y at
+ * pixel row (G-1-y)·S). 1 tile = 2 mm. Angles: 0 = +x, π/2 = +y. Concentration in arbitrary units: with the
+ * defaults a full-strength blob (r ≈ 3 tiles, peak 200) reads ~1 in and just downwind of it, ~0.2–0.4 at 2–5 cm.
+ * Map it to ORN rates with a saturating curve (e.g. r = rmax·c/(c + K)); K is the caller's choice.
+ * A = food odor from sugar tiles (stand-in for fermentation volatiles — sucrose itself does not smell);
+ * B = aversive odor from bitter tiles; C = odor from world.bad tiles (optional third source type).
+ * All three share the same air, walls, decay and diffusion; a tile's puff telegraph is that of its source blob
+ * (a blob = 4-connected tiles with sug, bit or bad > 0, whatever the mix).
+ *
+ * ── Model, per internal step h ────────────────────────────────────────────────────────────────────────
+ * air     stream function ψ = u0·y − v0·x + Σ_m a_m sin(k_m·x + Θ_m): uniform wind (u0, v0) = U·(cos, sin)(θ0 + δ),
+ *         δ = slow OU wander (wanderSigma, wanderTau), plus `modes` random eddies (wavelength eddyMin..eddyMax
+ *         tiles, RMS speed gust·U) swept along by the mean wind and decorrelating over eddyTau. Face fluxes are ψ
+ *         differences ⇒ the discrete flow is exactly divergence-free.
+ * emit    c += q · strength · m · h; m = random telegraph (0 or (on+off)/on, mean 1), one per connected source blob
+ *         (labelled at init) ⇒ blobs puff. puffOff = 0 ⇒ steady emission.
+ * move    finite-volume advection (upwind, 2nd order with the MC limiter; donor-cell next to walls and the map
+ *         edge) + 5-point diffusion, all as fluxes through tile faces ⇒ exactly conservative; substeps keep it
+ *         positive; mass only moves to edge neighbours (so it cannot leak through a 1-tile diagonal wall).
+ *         Walls: diffusion does not cross wall faces; air blowing out of a wall is clean, odor blown into a wall is
+ *         removed (walls absorb — think of low walls the wind blows over). Off-map counts as clean air.
+ * decay   c *= 1 − decay·h (odor escaping upward; keeps still-air fields bounded).
+ *
+ * ── LIMITS (honest) ───────────────────────────────────────────────────────────────────────────────────
+ * - 2 mm grid: real odor filaments are sub-mm, so the 0.3 mm left/right difference here is only the smooth field
+ *   gradient × 0.15 tile; it cannot give the sharp bilateral onset-timing cues real plumes give.
+ * - Intermittency is kinematic (puffing blobs + a few swept random eddies), not resolved turbulence; parameters
+ *   are game-scale guesses, not fitted to plume measurements.
+ * - The limiter falls back to first order at peaks and next to walls, where the scheme then adds numerical
+ *   diffusion up to ≈ |u|(1 − |u|h)/2 tiles²/s (≈ 4 at 10 tiles/s); structure below ~2–3 tiles blurs in ~1 s.
+ * - ponytail: the air does not flow around walls (no pressure solve). The game map is a sealed arena, where a
+ *   consistent 2-D flow would be zero; add a projection step if walls should steer the wind.
+ */
+(function () {
+  'use strict';
+  const DEFAULTS = {
+    h: 1 / 60,          // s, internal step
+    seed: 1,
+    windAngle: 0,       // rad, initial mean direction (toward)
+    windSpeed: 10,      // tiles/s = 20 mm/s (game scale; not calibrated to any assay)
+    wanderSigma: 0.35,  // rad, s.d. of the slow wander of the mean direction
+    wanderTau: 20,      // s
+    gust: 0.4,          // RMS eddy speed as a fraction of windSpeed
+    modes: 12, eddyMin: 8, eddyMax: 48, // number of eddy modes, wavelength range (tiles, log-uniform)
+    eddyTau: 1.5,       // s, eddy decorrelation time (in the frame moving with the mean wind)
+    D: 0.5,             // tiles²/s explicit diffusion (2 mm²/s; odorant molecular D is ~5–10 mm²/s, numerical adds ~4)
+    decay: 0.4,         // 1/s
+    qA: 0.02, qB: 0.02, qC: 0.02, // emission per strength unit per s
+    puffOn: 0.4, puffOff: 0.6, // s, mean on / off durations of each blob's telegraph
+  };
+  const P = { opts: null, A: null, B: null, C: null };
+  let G = 0, N = 0, wall, sug, bit, bad, A, B, C, tA, tB, tC, FS, TS, psi, FX, FY, comp, puff, mult, rng, S, M;
+  let kx, ky, amp, ph, syT, cyT, sx, cx;
+
+  function mulberry32(seed) {        // same generator as the game's rng()
+    let a = seed >>> 0;
+    return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  const gauss = () => Math.sqrt(-2 * Math.log(rng() || 1e-12)) * Math.cos(6.283185307179586 * rng());
+
+  P.init = function (world, opts) {
+    const o = P.opts = Object.assign({}, DEFAULTS, opts);
+    G = world.G || Math.round(Math.sqrt(world.wall.length)); N = G * G; wall = world.wall; sug = world.sug; bit = world.bit;
+    bad = world.bad || null;           // null ⇒ C is never computed (stays 0)
+    P.A = A = new Float32Array(N); P.B = B = new Float32Array(N); P.C = C = new Float32Array(N);
+    tA = new Float32Array(N); tB = new Float32Array(N); tC = new Float32Array(N);
+    FS = [A, B, C]; TS = [tA, tB, tC];
+    psi = new Float64Array((G + 1) * (G + 1)); FX = new Float64Array((G + 1) * G); FY = new Float64Array(G * (G + 1));
+    rng = mulberry32(o.seed);
+    // eddy modes: random direction, log-uniform wavelength, random phase
+    M = o.modes; kx = new Float64Array(M); ky = new Float64Array(M); amp = new Float64Array(M); ph = new Float64Array(M);
+    syT = new Float64Array(M * (G + 1)); cyT = new Float64Array(M * (G + 1)); sx = new Float64Array(G + 1); cx = new Float64Array(G + 1);
+    for (let m = 0; m < M; m++) {
+      const lam = o.eddyMin * Math.pow(o.eddyMax / o.eddyMin, rng()), a = 6.283185307179586 * rng(), k = 6.283185307179586 / lam;
+      kx[m] = k * Math.cos(a); ky[m] = k * Math.sin(a); amp[m] = 1 / k; ph[m] = 6.283185307179586 * rng();
+      for (let j = 0; j <= G; j++) { syT[m * (G + 1) + j] = Math.sin(ky[m] * j); cyT[m * (G + 1) + j] = Math.cos(ky[m] * j); }
+    }
+    // one puff telegraph per 4-connected blob of source tiles (+1 shared by tiles that become sources later)
+    comp = new Int32Array(N).fill(-1); let nc = 0;
+    for (let s = 0; s < N; s++) {
+      if (comp[s] >= 0 || wall[s] || !isSrc(s)) continue;
+      const q = [s]; comp[s] = nc;
+      while (q.length) {
+        const c = q.pop(), x = c % G, y = c / G | 0;
+        for (const n of [x > 0 ? c - 1 : -1, x < G - 1 ? c + 1 : -1, y > 0 ? c - G : -1, y < G - 1 ? c + G : -1])
+          if (n >= 0 && comp[n] < 0 && !wall[n] && isSrc(n)) { comp[n] = nc; q.push(n); }
+      }
+      nc++;
+    }
+    for (let k = 0; k < N; k++) if (comp[k] < 0) comp[k] = nc;
+    puff = new Uint8Array(nc + 1); mult = new Float64Array(nc + 1);
+    for (let b = 0; b <= nc; b++) puff[b] = rng() < o.puffOn / (o.puffOn + o.puffOff) ? 1 : 0;
+    S = { t: 0, acc: 0, base: o.windAngle, U: o.windSpeed, delta: 0, ux: 0, uy: 0, emA: 0, emB: 0, emC: 0, deA: 0, deB: 0, deC: 0 };
+    return o;
+  };
+  const isSrc = k => sug[k] > 0 || bit[k] > 0 || (bad !== null && bad[k] > 0);
+
+  P.setWind = function (angle, speed) { S.base = angle; if (speed !== undefined) S.U = Math.max(0, speed); S.delta = 0; };
+  P.wind = () => ({ ux: S.ux, uy: S.uy, angle: Math.atan2(S.uy, S.ux), speed: Math.hypot(S.ux, S.uy),
+                    baseAngle: S.base, baseSpeed: S.U });
+  P.windAt = function (x, y) {       // u = ∂ψ/∂y, v = −∂ψ/∂x of the current ψ
+    let u = S.ux, v = S.uy; const e = P.opts.gust * S.U * Math.sqrt(2 / M);
+    for (let m = 0; m < M; m++) { const c = e * amp[m] * Math.cos(kx[m] * x + ky[m] * y + ph[m]); u += c * ky[m]; v -= c * kx[m]; }
+    return { ux: u, uy: v };
+  };
+
+  P.step = function (dt) {
+    S.acc += Math.min(dt, 1);
+    const h = P.opts.h; let n = 0;
+    while (S.acc >= h * (1 - 1e-9)) { S.acc -= h; tick(h); n++; }
+    return n;
+  };
+
+  function tick(h) {
+    const o = P.opts, G1 = G + 1;
+    const aW = Math.exp(-h / o.wanderTau);
+    S.delta = S.delta * aW + o.wanderSigma * Math.sqrt(1 - aW * aW) * gauss();
+    const th = S.base + S.delta, u0 = S.ux = S.U * Math.cos(th), v0 = S.uy = S.U * Math.sin(th);
+    // ψ on tile corners: uniform wind + eddies (swept by the mean wind, phase random walk)
+    const e = o.gust * S.U * Math.sqrt(2 / M), dph = Math.sqrt(2 * h / o.eddyTau);
+    for (let j = 0; j <= G; j++) for (let i = 0; i <= G; i++) psi[j * G1 + i] = u0 * j - v0 * i;
+    for (let m = 0; m < M; m++) {
+      ph[m] += -(kx[m] * u0 + ky[m] * v0) * h + dph * gauss();
+      if (e === 0) continue;
+      const a = e * amp[m], oy = m * G1;
+      for (let i = 0; i <= G; i++) { sx[i] = a * Math.sin(kx[m] * i + ph[m]); cx[i] = a * Math.cos(kx[m] * i + ph[m]); }
+      for (let j = 0; j <= G; j++) { const s = syT[oy + j], c = cyT[oy + j], r = j * G1;
+        for (let i = 0; i <= G; i++) psi[r + i] += sx[i] * c + cx[i] * s; }     // sin(kx·i + ky·j + ph)
+    }
+    let um = 0, vm = 0;                // face fluxes (tiles²/s through a unit face) and their max
+    for (let j = 0; j < G; j++) for (let i = 0; i <= G; i++) { const f = FX[j * G1 + i] = psi[(j + 1) * G1 + i] - psi[j * G1 + i]; if (Math.abs(f) > um) um = Math.abs(f); }
+    for (let j = 0; j <= G; j++) for (let i = 0; i < G; i++) { const f = FY[j * G + i] = psi[j * G1 + i] - psi[j * G1 + i + 1]; if (Math.abs(f) > vm) vm = Math.abs(f); }
+    // puffs
+    if (o.puffOff > 0) {
+      const pOff = 1 - Math.exp(-h / o.puffOn), pOn = 1 - Math.exp(-h / o.puffOff), hi = (o.puffOn + o.puffOff) / o.puffOn;
+      for (let b = 0; b < puff.length; b++) { const r = rng(); if (puff[b] ? r < pOff : r < pOn) puff[b] ^= 1; mult[b] = puff[b] * hi; }
+    } else mult.fill(1);
+    // substeps ⇒ positive: a limited face value is ≤ 2× the donor's, and a tile's outflow faces carry ≤ um + vm
+    const n = Math.max(1, Math.ceil(h * (2 * (um + vm) + 4 * o.D) / 0.95)), dt = h / n;
+    const cd = o.D * dt, kd = o.decay * dt;
+    for (let s = 0; s < n; s++) {
+      transport(FS, TS, bad ? 3 : 2, dt, cd);
+      S.deA += sources(A, tA, sug, o.qA * dt, kd, 0); S.deB += sources(B, tB, bit, o.qB * dt, kd, 1);
+      if (bad) S.deC += sources(C, tC, bad, o.qC * dt, kd, 2);
+    }
+    S.t += h;
+  }
+
+  // upwind value at a face, second-order with the MC limiter (TVD): donor c, downwind cn, upwind of donor cu,
+  // w = 1 − Courant. Falls back to donor-cell next to walls / the map edge (callers pass only air tiles).
+  function face(c, cn, cu, w) {
+    const d = cn - c; if (d === 0) return c;
+    const r = (c - cu) / d, phi = Math.max(0, Math.min(2 * r, 0.5 + 0.5 * r, 2));
+    return c + 0.5 * w * phi * d;
+  }
+
+  // FS[c] → TS[c] for c < nc: limited upwind advection + diffusion, as face fluxes. Face geometry (which tiles are
+  // air, donor / downwind / upwind-of-donor tile) is worked out once per face, then applied to every channel with
+  // exactly the per-channel arithmetic of the 2-channel version.
+  function transport(FS, TS, nc, dt, cd) {
+    const G1 = G + 1;
+    for (let c = 0; c < nc; c++) TS[c].set(FS[c]);
+    for (let j = 0; j < G; j++) for (let i = 0; i <= G; i++) {       // face between (i-1, j) and (i, j)
+      const kL = j * G + i - 1, kR = kL + 1, inL = i > 0, inR = i < G;
+      const aL = inL && !wall[kL], aR = inR && !wall[kR];            // air on that side?
+      if (!aL && !aR) continue;
+      const u = FX[j * G1 + i] * dt;
+      let k0 = -1, k1 = 0, ku = -1, w = 0;                           // donor, downwind, upwind of donor (-1: donor-cell)
+      if (u > 0) { if (aL) { k0 = kL; k1 = kR; w = 1 - u; if (aR && i > 1 && !wall[kL - 1]) ku = kL - 1; } }
+      else if (aR) { k0 = kR; k1 = kL; w = 1 + u; if (aL && i < G - 1 && !wall[kR + 1]) ku = kR + 1; }
+      const dm = aL && aR ? 0 : !inL ? 1 : !inR ? 2 : 3;             // diffusion: both air / off left / off right / none
+      for (let c = 0; c < nc; c++) {
+        const F = FS[c], T = TS[c];
+        let fl = 0;                                                  // flux left → right
+        if (k0 >= 0) fl = ku >= 0 ? u * face(F[k0], F[k1], F[ku], w) : u * F[k0];
+        if (dm === 0) fl += cd * (F[kL] - F[kR]);
+        else if (dm === 1) fl -= cd * F[kR];                         // diffusing off the map edge
+        else if (dm === 2) fl += cd * F[kL];
+        if (aL) T[kL] -= fl;
+        if (aR) T[kR] += fl;
+      }
+    }
+    for (let j = 0; j <= G; j++) for (let i = 0; i < G; i++) {       // face between (i, j-1) and (i, j)
+      const kD = (j - 1) * G + i, kU = kD + G, inD = j > 0, inU = j < G;
+      const aD = inD && !wall[kD], aU = inU && !wall[kU];
+      if (!aD && !aU) continue;
+      const v = FY[j * G + i] * dt;
+      let k0 = -1, k1 = 0, ku = -1, w = 0;
+      if (v > 0) { if (aD) { k0 = kD; k1 = kU; w = 1 - v; if (aU && j > 1 && !wall[kD - G]) ku = kD - G; } }
+      else if (aU) { k0 = kU; k1 = kD; w = 1 + v; if (aD && j < G - 1 && !wall[kU + G]) ku = kU + G; }
+      const dm = aD && aU ? 0 : !inD ? 1 : !inU ? 2 : 3;
+      for (let c = 0; c < nc; c++) {
+        const F = FS[c], T = TS[c];
+        let fl = 0;                                                  // flux down → up
+        if (k0 >= 0) fl = ku >= 0 ? v * face(F[k0], F[k1], F[ku], w) : v * F[k0];
+        if (dm === 0) fl += cd * (F[kD] - F[kU]);
+        else if (dm === 1) fl -= cd * F[kU];
+        else if (dm === 2) fl += cd * F[kD];
+        if (aD) T[kD] -= fl;
+        if (aU) T[kU] += fl;
+      }
+    }
+  }
+
+  // T → F (one channel): decay + emission from src (strength array). ch 0/1/2 = A/B/C emission counter.
+  // Returns the decayed mass. A tile with src = 0 gets no emission term (the 2-channel code added an exact 0 there).
+  function sources(F, T, src, q, kd, ch) {
+    let de = 0, em = 0;
+    for (let k = 0; k < N; k++) {
+      if (wall[k]) { F[k] = 0; continue; }
+      const c = T[k]; de += c * kd;
+      if (src[k] > 0) { const e = q * src[k] * mult[comp[k]]; em += e; F[k] = c * (1 - kd) + e; }
+      else F[k] = c * (1 - kd);
+    }
+    if (ch === 0) S.emA += em; else if (ch === 1) S.emB += em; else S.emC += em;
+    return de;
+  }
+
+  const W4 = new Float64Array(4), VA = new Float64Array(4), VB = new Float64Array(4), VC = new Float64Array(4), OK = new Uint8Array(4);
+  P.grad = function (x, y) {
+    const r = { A: 0, B: 0, C: 0, Ax: 0, Ay: 0, Bx: 0, By: 0, Cx: 0, Cy: 0 };
+    const ix = Math.floor(x), iy = Math.floor(y);
+    if (!(ix >= 0 && iy >= 0 && ix < G && iy < G) || wall[iy * G + ix]) return r;   // off-map / inside a wall
+    const i0 = Math.floor(x - 0.5), j0 = Math.floor(y - 0.5), tx = x - 0.5 - i0, ty = y - 0.5 - j0;
+    W4[0] = (1 - tx) * (1 - ty); W4[1] = tx * (1 - ty); W4[2] = (1 - tx) * ty; W4[3] = tx * ty;   // corners 00 10 01 11
+    for (let c = 0; c < 4; c++) {
+      const i = i0 + (c & 1), j = j0 + (c >> 1);
+      if (i < 0 || j < 0 || i >= G || j >= G) { OK[c] = 1; VA[c] = VB[c] = VC[c] = 0; continue; }       // off-map = clean air
+      const k = j * G + i; OK[c] = wall[k] ? 0 : 1; VA[c] = A[k]; VB[c] = B[k]; VC[c] = C[k];
+    }
+    const home = (ix - i0) + 2 * (iy - j0);          // corner we stand in (air); its diagonal is 3 − home
+    if (home === 0 || home === 3 ? !OK[1] && !OK[2] : !OK[0] && !OK[3]) OK[3 - home] = 0;  // walled-off diagonal
+    let sw = 0, sa = 0, sb = 0, sc = 0;
+    for (let c = 0; c < 4; c++) if (OK[c]) { sw += W4[c]; sa += W4[c] * VA[c]; sb += W4[c] * VB[c]; sc += W4[c] * VC[c]; }
+    const va = sa / sw, vb = sb / sw, vc = sc / sw;   // sw ≥ 1/4 (home corner)
+    for (let c = 0; c < 4; c++) if (!OK[c]) { VA[c] = va; VB[c] = vb; VC[c] = vc; }   // fill walls ⇒ bilinear value = va
+    r.A = va; r.B = vb; r.C = vc;
+    r.Ax = (1 - ty) * (VA[1] - VA[0]) + ty * (VA[3] - VA[2]); r.Ay = (1 - tx) * (VA[2] - VA[0]) + tx * (VA[3] - VA[1]);
+    r.Bx = (1 - ty) * (VB[1] - VB[0]) + ty * (VB[3] - VB[2]); r.By = (1 - tx) * (VB[2] - VB[0]) + tx * (VB[3] - VB[1]);
+    r.Cx = (1 - ty) * (VC[1] - VC[0]) + ty * (VC[3] - VC[2]); r.Cy = (1 - tx) * (VC[2] - VC[0]) + tx * (VC[3] - VC[1]);
+    return r;
+  };
+  P.sample = function (x, y) { const g = P.grad(x, y); return { A: g.A, B: g.B, C: g.C }; };
+
+  P.antennae = function (x, y, heading, sep = 0.15) {
+    const lx = -Math.sin(heading) * sep / 2, ly = Math.cos(heading) * sep / 2;   // centre → left antenna
+    const L = P.grad(x + lx, y + ly), R = P.grad(x - lx, y - ly), g = P.grad(x, y);
+    return { A: g.A, B: g.B, C: g.C, AL: L.A, AR: R.A, BL: L.B, BR: R.B, CL: L.C, CR: R.C,
+             dA: L.A - R.A, dB: L.B - R.B, dC: L.C - R.C,
+             dAg: 2 * (g.Ax * lx + g.Ay * ly), dBg: 2 * (g.Bx * lx + g.By * ly), dCg: 2 * (g.Cx * lx + g.Cy * ly) };
+  };
+
+  P.render = function (rgba, W = 768, H = W, style = {}) {
+    const sA = style.sA || 0.5, sB = style.sB || 0.5, sC = style.sC || 0.5, al = 255 * (style.alpha ?? 0.7);
+    const cA = style.colA || [255, 205, 110], cB = style.colB || [110, 225, 200], cC = style.colC || [205, 150, 255];
+    const row = new Uint8ClampedArray(4 * G), xm = new Int32Array(W);
+    for (let px = 0; px < W; px++) xm[px] = 4 * Math.floor(px * G / W);
+    let prev = -1;
+    for (let py = 0; py < H; py++) {
+      const ty = G - 1 - Math.floor(py * G / H), base = 4 * W * py;
+      if (ty === prev) { rgba.copyWithin(base, base - 4 * W, base); continue; }
+      prev = ty;
+      for (let x = 0; x < G; x++) {
+        const k = ty * G + x, a = A[k], b = B[k], c = C[k];
+        const aa = a / (a + sA), ab = b / (b + sB), ac = c / (c + sC), s = aa + ab + ac, o = 4 * x;
+        if (!(s > 1e-4)) { row[o] = row[o + 1] = row[o + 2] = row[o + 3] = 0; continue; }
+        row[o] = (aa * cA[0] + ab * cB[0] + ac * cC[0]) / s; row[o + 1] = (aa * cA[1] + ab * cB[1] + ac * cC[1]) / s;
+        row[o + 2] = (aa * cA[2] + ab * cB[2] + ac * cC[2]) / s; row[o + 3] = al * (1 - (1 - aa) * (1 - ab) * (1 - ac));
+      }
+      for (let px = 0, p = base; px < W; px++, p += 4) {
+        const o = xm[px]; rgba[p] = row[o]; rgba[p + 1] = row[o + 1]; rgba[p + 2] = row[o + 2]; rgba[p + 3] = row[o + 3];
+      }
+    }
+    return rgba;
+  };
+
+  P.stats = function () {
+    let ma = 0, mb = 0, mc = 0;
+    for (let k = 0; k < N; k++) { ma += A[k]; mb += B[k]; mc += C[k]; }
+    return { t: S.t, massA: ma, massB: mb, massC: mc, emittedA: S.emA, emittedB: S.emB, emittedC: S.emC,
+             decayedA: S.deA, decayedB: S.deB, decayedC: S.deC };
+  };
+
+  globalThis.PLUME = P;
+})();
+</script>
+<script>
+const D = {"M":36,"types":["EPG","Delta7","PEG","PENl","PENr"],"count":{"EPG":47,"Delta7":42,"PEG":20,"PENl":21,"PENr":21},"sign":{"EPG":1,"Delta7":-1,"PEG":1,"PENl":1,"PENr":1},"sym":{"EPG>EPG":[0.0,0.0,0.0,0.0,0.0,0.0,0.067,0.067,0.067,0.067,0.067,0.094,0.522,1.424,2.942,6.764,10.494,11.584,11.584,10.494,6.764,2.942,1.424,0.522,0.094,0.067,0.067,0.067,0.067,0.067,0.0,0.0,0.0,0.0,0.0,0.0],"EPG>Delta7":[0.75,0.674,0.556,0.491,0.475,0.567,0.691,1.045,1.495,2.356,3.184,4.402,5.744,6.622,6.87,7.665,7.992,7.518,7.518,7.992,7.665,6.87,6.622,5.744,4.402,3.184,2.356,1.495,1.045,0.691,0.567,0.475,0.491,0.556,0.674,0.75],"EPG>PEG":[0.946,0.827,0.54,0.275,0.111,0.276,0.417,0.877,0.961,0.961,0.897,0.93,1.134,1.47,3.274,20.88,38.405,39.546,39.546,38.405,20.88,3.274,1.47,1.134,0.93,0.897,0.961,0.961,0.877,0.417,0.276,0.111,0.275,0.54,0.827,0.946],"Delta7>EPG":[5.586,5.354,4.472,3.51,2.542,1.935,0.99,0.602,0.279,0.06,0.055,0.058,0.058,0.068,0.084,0.053,0.038,0.042,0.042,0.038,0.053,0.084,0.068,0.058,0.058,0.055,0.06,0.279,0.602,0.99,1.935,2.542,3.51,4.472,5.354,5.586],"Delta7>Delta7":[4.99,5.037,4.623,4.243,4.408,3.923,3.53,3.414,2.978,2.645,2.664,3.074,3.292,3.894,4.17,4.724,5.012,5.014,5.014,5.012,4.724,4.17,3.894,3.292,3.074,2.664,2.645,2.978,3.414,3.53,3.923,4.408,4.243,4.623,5.037,4.99],"Delta7>PEG":[19.204,17.117,14.773,11.64,8.417,5.876,3.818,2.447,2.01,1.076,0.467,0.446,0.454,0.304,0.223,0.198,0.176,0.133,0.133,0.176,0.198,0.223,0.304,0.454,0.446,0.467,1.076,2.01,2.447,3.818,5.876,8.417,11.64,14.773,17.117,19.204],"PEG>EPG":[0.046,0.023,0.023,0.023,0.0,0.0,0.042,0.065,0.065,0.065,0.065,0.023,0.023,0.062,0.237,0.942,1.647,1.8,1.8,1.647,0.942,0.237,0.062,0.023,0.023,0.065,0.065,0.065,0.065,0.042,0.0,0.0,0.023,0.023,0.023,0.046],"PEG>Delta7":[0.072,0.072,0.047,0.022,0.022,0.022,0.022,0.103,0.103,0.158,0.137,0.137,0.12,0.15,0.142,0.172,0.202,0.184,0.184,0.202,0.172,0.142,0.15,0.12,0.137,0.137,0.158,0.103,0.103,0.022,0.022,0.022,0.022,0.047,0.072,0.072],"PEG>PEG":[0.486,0.396,0.297,0.198,0.054,0.054,0.108,0.225,0.585,0.585,0.585,0.477,0.531,0.765,0.927,1.8,2.673,2.664,2.664,2.673,1.8,0.927,0.765,0.531,0.477,0.585,0.585,0.585,0.225,0.108,0.054,0.054,0.198,0.297,0.396,0.486],"PENl>EPG":[0.0,0.0,0.0,0.044,0.361,0.981,3.235,5.146,7.284,11.934,21.8,26.324,29.552,29.668,29.3,22.8,17.329,12.952,10.862,6.579,2.593,1.39,0.628,0.42,0.102,0.102,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>EPG":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.102,0.102,0.42,0.628,1.39,2.593,6.579,10.862,12.952,17.329,22.8,29.3,29.668,29.552,26.324,21.8,11.934,7.284,5.146,3.235,0.981,0.361,0.044,0.0,0.0,0.0],"EPG>PENl":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.022,0.062,0.197,0.252,0.839,4.333,9.552,12.328,13.813,16.844,18.956,22.056,23.034,22.807,20.236,15.476,7.408,3.564,2.25,1.204,0.336,0.044,0.0,0.0,0.0,0.0],"EPG>PENr":[0.0,0.0,0.0,0.0,0.044,0.336,1.204,2.25,3.564,7.408,15.476,20.236,22.807,23.034,22.056,18.956,16.844,13.813,12.328,9.552,4.333,0.839,0.252,0.197,0.062,0.022,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENl>Delta7":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>Delta7":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"Delta7>PENl":[12.164,10.645,7.812,5.22,4.249,3.118,1.277,0.772,0.441,0.049,0.057,0.118,0.118,0.118,0.118,0.061,0.045,0.045,0.045,0.045,0.045,0.0,0.122,0.453,0.628,0.828,1.506,2.457,2.682,3.955,6.437,8.27,10.555,13.339,14.812,13.494],"Delta7>PENr":[13.494,14.812,13.339,10.555,8.27,6.437,3.955,2.682,2.457,1.506,0.828,0.628,0.453,0.122,0.0,0.045,0.045,0.045,0.045,0.045,0.061,0.118,0.118,0.118,0.118,0.057,0.049,0.441,0.772,1.277,3.118,4.249,5.22,7.812,10.645,12.164],"PENl>PEG":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.052,0.052,0.583,1.217,1.954,2.28,2.28,1.928,1.449,0.814,0.437,0.437,0.257,0.103,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>PEG":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.103,0.257,0.437,0.437,0.814,1.449,1.928,2.28,2.28,1.954,1.217,0.583,0.052,0.052,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PEG>PENl":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.068,0.068,0.068,0.068,0.823,2.889,3.943,4.277,5.074,7.92,9.292,10.277,10.234,9.592,6.052,2.588,0.549,0.257,0.103,0.043,0.0,0.0,0.0,0.0,0.0],"PEG>PENr":[0.0,0.0,0.0,0.0,0.0,0.043,0.103,0.257,0.549,2.588,6.052,9.592,10.234,10.277,9.292,7.92,5.074,4.277,3.943,2.889,0.823,0.068,0.068,0.068,0.068,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENl>PENl":[10.4,10.408,9.951,9.844,9.036,9.698,10.947,12.212,11.38,9.82,10.008,10.735,8.866,8.269,8.261,11.926,14.571,13.503,13.527,14.466,12.522,8.228,8.318,8.734,10.204,10.204,10.228,11.592,12.726,11.861,10.082,9.053,9.559,9.812,10.106,10.572],"PENr>PENr":[10.572,10.106,9.812,9.559,9.053,10.082,11.861,12.726,11.592,10.228,10.204,10.204,8.734,8.318,8.228,12.522,14.466,13.527,13.503,14.571,11.926,8.261,8.269,8.866,10.735,10.008,9.82,11.38,12.212,10.947,9.698,9.036,9.844,9.951,10.408,10.4],"PENl>PENr":[0.049,0.164,0.164,0.164,1.143,3.576,4.408,5.02,5.82,5.176,2.694,2.898,2.286,1.486,1.258,1.314,0.164,0.164,0.164,0.057,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>PENl":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.057,0.164,0.164,0.164,1.314,1.258,1.486,2.286,2.898,2.694,5.176,5.82,5.02,4.408,3.576,1.143,0.164,0.164,0.164,0.049]},"raw":{"EPG>EPG":[0.0,0.0,0.0,0.0,0.0,0.0,0.134,0.134,0.134,0.134,0.134,0.108,0.554,1.496,3.015,6.828,10.554,11.623,11.545,10.433,6.701,2.868,1.353,0.489,0.081,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"EPG>Delta7":[0.726,0.722,0.649,0.511,0.5,0.576,0.642,0.879,1.36,2.316,3.348,4.596,5.985,6.77,6.788,7.401,7.736,7.408,7.627,8.247,7.929,6.952,6.474,5.504,4.209,3.02,2.396,1.63,1.211,0.74,0.558,0.449,0.471,0.463,0.627,0.773],"EPG>PEG":[0.904,0.72,0.529,0.191,0.046,0.092,0.237,0.927,0.919,0.919,0.927,0.98,1.026,1.478,3.516,19.264,38.757,39.592,39.5,38.053,22.496,3.033,1.463,1.241,0.881,0.866,1.003,1.003,0.827,0.597,0.46,0.176,0.36,0.551,0.934,0.988],"Delta7>EPG":[5.54,4.928,3.968,3.082,2.364,1.838,1.04,0.671,0.317,0.095,0.084,0.091,0.117,0.117,0.15,0.088,0.058,0.033,0.051,0.018,0.018,0.018,0.018,0.0,0.026,0.026,0.026,0.241,0.533,0.941,2.032,2.721,3.939,4.975,5.781,5.632],"Delta7>Delta7":[4.931,4.98,4.641,4.094,4.155,3.682,3.473,3.367,2.996,2.694,2.788,3.061,3.384,3.898,4.2,4.837,5.029,4.931,5.098,4.996,4.612,4.139,3.89,3.2,3.086,2.539,2.596,2.959,3.461,3.588,4.163,4.661,4.392,4.604,5.094,5.049],"Delta7>PEG":[19.157,15.394,12.18,9.48,7.834,5.383,3.471,2.58,2.194,1.14,0.566,0.566,0.651,0.343,0.24,0.189,0.189,0.103,0.163,0.163,0.206,0.206,0.266,0.257,0.326,0.369,1.011,1.826,2.314,4.166,6.369,9.0,13.8,17.366,18.84,19.251],"PEG>EPG":[0.046,0.0,0.0,0.0,0.0,0.0,0.046,0.092,0.092,0.092,0.092,0.046,0.0,0.077,0.283,1.157,1.693,1.838,1.762,1.601,0.728,0.191,0.046,0.046,0.0,0.038,0.038,0.038,0.038,0.038,0.0,0.0,0.046,0.046,0.046,0.046],"PEG>Delta7":[0.051,0.051,0.0,0.0,0.0,0.0,0.0,0.077,0.077,0.137,0.137,0.137,0.103,0.103,0.137,0.197,0.197,0.154,0.214,0.206,0.146,0.146,0.197,0.137,0.137,0.137,0.18,0.129,0.129,0.043,0.043,0.043,0.043,0.094,0.094,0.094],"PEG>PEG":[0.486,0.198,0.09,0.0,0.0,0.0,0.216,0.306,0.306,0.306,0.306,0.09,0.09,1.278,1.476,3.132,3.222,3.258,2.07,2.124,0.468,0.378,0.252,0.972,0.864,0.864,0.864,0.864,0.144,0.0,0.108,0.108,0.396,0.504,0.594,0.486],"PENl>EPG":[0.0,0.0,0.0,0.044,0.372,1.043,3.523,5.311,7.324,12.934,23.723,27.779,31.178,29.931,29.26,20.462,15.093,10.92,10.111,4.96,2.298,1.131,0.117,0.117,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>EPG":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.204,0.204,0.722,1.138,1.649,2.889,8.199,11.613,14.984,19.565,25.138,29.34,29.405,27.925,24.868,19.878,10.935,7.244,4.982,2.947,0.919,0.35,0.044,0.0,0.0,0.0],"EPG>PENl":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.708,3.363,8.987,12.401,12.693,15.801,18.806,22.125,23.103,24.066,21.469,16.785,8.075,3.771,2.517,1.298,0.321,0.088,0.0,0.0,0.0,0.0],"EPG>PENr":[0.0,0.0,0.0,0.0,0.0,0.35,1.109,1.984,3.356,6.74,14.167,19.003,21.549,22.964,21.987,19.105,17.887,14.933,12.255,10.118,5.303,0.97,0.503,0.394,0.124,0.044,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENl>Delta7":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>Delta7":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"Delta7>PENl":[12.588,8.849,5.216,3.78,3.053,2.245,0.49,0.188,0.0,0.0,0.114,0.188,0.188,0.188,0.188,0.073,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.318,0.743,1.698,1.869,3.518,6.58,8.131,12.669,16.433,16.408,13.755],"Delta7>PENr":[13.233,13.216,10.245,8.441,8.408,6.294,4.392,3.494,3.216,2.269,1.339,1.257,0.906,0.245,0.0,0.09,0.09,0.09,0.09,0.09,0.049,0.049,0.049,0.049,0.049,0.0,0.098,0.882,1.355,2.065,3.992,5.445,6.661,10.408,12.441,11.739],"PENl>PEG":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.103,0.103,0.977,1.2,1.611,2.263,2.263,1.663,1.543,1.131,0.377,0.377,0.103,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>PEG":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.206,0.411,0.497,0.497,0.497,1.354,2.194,2.297,2.297,2.297,1.234,0.189,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PEG>PENl":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.137,0.137,0.137,0.137,0.223,1.749,2.743,2.743,3.446,7.749,9.377,10.474,10.971,10.354,6.086,2.88,0.789,0.291,0.206,0.086,0.0,0.0,0.0,0.0,0.0],"PEG>PENr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.223,0.309,2.297,6.017,8.829,9.497,10.08,9.206,8.091,6.703,5.811,5.143,4.029,1.423,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENl>PENl":[10.678,10.057,10.335,11.265,10.057,11.086,11.935,13.339,12.082,10.4,9.42,11.641,9.029,7.869,7.869,11.167,13.518,13.127,13.127,13.682,13.012,8.294,8.294,9.42,11.478,9.894,11.494,13.11,14.269,13.11,12.016,10.171,11.216,10.253,10.286,10.857],"PENr>PENr":[10.286,9.927,9.371,7.902,7.935,8.147,10.612,11.184,10.073,8.963,10.514,8.931,8.049,8.343,8.163,12.033,15.249,13.927,13.878,15.624,12.686,8.653,8.669,8.702,9.829,10.596,9.241,10.678,11.086,9.959,8.31,8.016,8.424,9.567,10.759,10.122],"PENl>PENr":[0.0,0.098,0.098,0.098,0.947,3.429,4.229,5.012,5.878,5.241,2.759,2.661,1.878,1.012,0.882,0.882,0.082,0.082,0.082,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"PENr>PENl":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.114,0.245,0.245,0.245,1.747,1.633,1.959,2.694,3.135,2.629,5.11,5.763,5.029,4.588,3.722,1.339,0.229,0.229,0.229,0.098]}}, TT = {"levels": [0, 25, 50, 100, 150, 200], "rate": [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [126.0, 121.0, 94.5, 0.0, 0.0, 0.0], [279.5, 278.2, 275.2, 199.2, 51.5, 0.0], [291.8, 290.0, 288.0, 279.8, 264.2, 201.5]], "active": [[0, 70, 77, 90, 102, 112], [153, 219, 227, 236, 248, 260], [187, 254, 255, 256, 263, 275], [592, 660, 642, 311, 313, 330], [655, 728, 731, 729, 522, 371], [814, 920, 925, 771, 761, 737]], "readout": "CB0700/CB0701 (ingestion MN)", "K": 0.4}, ST = {"count":{"EPG":47,"Delta7":42,"FC2":83,"PFL3_L":12,"PFL3_R":12},"profile":{"EPG>PFL3_L":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.045,0.389,3.689,5.962,5.962,6.102,5.834,2.566,0.294,0.294,0.109,0.032,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"EPG>PFL3_R":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.032,0.109,0.294,0.294,2.566,5.834,6.102,5.962,5.962,3.689,0.389,0.045,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"Delta7>PFL3_L":[17.136,15.471,12.743,9.893,6.957,5.264,3.071,1.907,0.921,0.343,0.5,0.314,0.414,0.357,0.257,0.1,0.1,0.0,0.0,0.0,0.0,0.064,0.064,0.064,0.064,0.1,0.314,1.107,2.064,2.714,5.864,7.693,10.943,13.879,17.121,17.55],"Delta7>PFL3_R":[17.55,17.121,13.879,10.943,7.693,5.864,2.714,2.064,1.107,0.314,0.1,0.064,0.064,0.064,0.064,0.0,0.0,0.0,0.0,0.1,0.1,0.257,0.357,0.414,0.314,0.5,0.343,0.921,1.907,3.071,5.264,6.957,9.893,12.743,15.471,17.136],"FC2>PFL3_L":[0.484,0.651,0.98,1.204,1.54,1.814,2.013,2.371,2.696,3.322,3.824,4.251,4.413,4.735,4.29,3.936,3.224,2.53,1.775,1.157,0.629,0.495,0.267,0.101,0.061,0.0,0.022,0.022,0.022,0.022,0.058,0.054,0.108,0.181,0.231,0.336],"FC2>PFL3_R":[0.336,0.231,0.181,0.108,0.054,0.058,0.022,0.022,0.022,0.022,0.0,0.061,0.101,0.267,0.495,0.629,1.157,1.775,2.53,3.224,3.936,4.29,4.735,4.413,4.251,3.824,3.322,2.696,2.371,2.013,1.814,1.54,1.204,0.98,0.651,0.484]},"w_dn":272.5,"gf":0.06,"gd":1.0,"bias":-1.92}, VZ = {"om":[[0,-10,2],[0,-14,-6],[0,-7,-15],[0,-7,-13],[0,3,-15],[0,1,-13],[0,0,-14],[0,-4,-16],[0,-4,-14],[0,12,-2],[0,3,-1],[0,6,-2],[0,5,-1],[0,11,1],[0,14,6],[0,5,-15],[0,8,0],[0,7,-1],[0,0,22],[1,12,4],[0,6,-16],[1,-7,23],[0,-11,-1],[0,2,-28],[0,5,3],[0,-3,-17],[0,-5,-19],[0,4,-18],[0,-8,-20],[0,-8,-22],[0,-9,17],[0,3,-11],[0,14,-12],[0,8,22],[0,10,-6],[1,-15,-5],[0,-11,13],[0,-16,2],[0,6,-8],[0,-13,17],[0,15,-1],[1,7,-21],[0,12,-12],[0,-13,15],[1,8,22],[0,-5,-27],[0,-10,-8],[0,-11,-7],[0,-10,-4],[1,0,8],[0,7,-17],[1,12,0],[1,10,-2],[0,-8,20],[1,10,14],[0,-1,-13],[1,6,-26],[0,-2,0],[1,10,-10],[0,9,-3],[0,-11,-11],[0,12,-4],[0,10,-8],[0,9,-7],[1,8,-28],[0,12,-8],[1,11,-1],[0,13,-7],[0,13,-13],[0,14,-6],[1,9,3],[1,11,7],[1,10,0],[1,-13,-9],[0,-16,0],[0,8,-14],[0,-12,6],[1,-16,10],[0,14,0],[0,16,-2],[0,-17,1],[1,8,12],[1,-13,1],[0,5,-21],[1,-9,21],[0,-6,0],[0,-7,7],[0,-18,4],[0,-1,-17],[0,1,-9],[0,5,-5],[0,7,-21],[0,-9,-21],[0,9,-27],[0,-8,-10],[0,4,0],[0,-8,6],[0,-3,21],[0,-14,14],[0,-2,-24],[0,9,11],[0,-7,-1],[0,-6,-8],[1,-10,2],[0,11,-11],[0,-4,-4],[0,6,22],[1,-6,4],[1,2,-20],[0,-7,-23],[0,-8,16],[0,-12,-6],[1,-8,-12],[1,6,22],[1,7,-15],[0,-3,3],[0,1,25],[1,3,9],[0,-17,-3],[0,-8,26],[1,8,-26],[0,6,-4],[0,-10,-2],[0,-8,0],[1,10,-12],[1,-9,-11],[0,-14,-8],[0,-7,-5],[1,6,4],[0,5,-19],[0,2,-16],[0,-3,-7],[0,3,5],[0,-4,-10],[1,1,-9],[0,-7,-21],[0,12,-10],[0,-4,-18],[1,-9,7],[1,0,-26],[0,2,-20],[1,9,5],[1,-11,13],[0,0,8],[0,1,15],[1,7,-3],[1,-3,-9],[0,8,-8],[1,-4,26],[0,-2,-6],[0,9,9],[0,-5,11],[0,-3,-5],[0,-13,-11],[0,-11,15],[1,-10,6],[0,-17,5],[0,-7,21],[0,-1,-27],[0,-4,-8],[1,5,-11],[0,7,-13],[0,1,-7],[0,-1,-3],[1,9,17],[1,3,-29],[1,-1,-27],[0,15,-5],[1,-18,2],[0,10,24],[1,12,10],[0,16,2],[1,0,4],[1,-5,27],[0,11,19],[1,3,13],[1,2,28],[1,1,17],[0,12,-6],[0,9,-5],[0,3,19],[0,-5,-9],[0,-12,-12],[1,-5,23],[1,12,-6],[0,14,-14],[1,15,3],[1,-12,4],[1,-5,-11],[0,2,-26],[0,-3,-15],[0,8,-4],[0,11,-15],[0,-8,2],[0,0,-12],[1,-8,-2],[0,2,2],[0,-1,-19],[0,-14,2],[0,-7,25],[1,7,-19],[0,-8,-16],[1,9,-15],[1,-6,10],[1,4,-24],[1,-4,-20],[1,11,15],[0,9,25],[1,4,24],[0,0,6],[1,6,12],[0,2,-12],[1,-1,-7],[0,-6,-22],[1,-3,25],[1,2,10],[0,-3,-11],[1,-3,-5],[0,-6,-12],[0,-7,9],[0,6,14],[1,-2,2],[1,0,-20],[0,-4,4],[1,-4,28],[1,8,-6],[0,-10,18],[1,0,14],[0,9,13],[0,-7,23],[1,-12,-12],[0,-6,-18],[1,-11,-5],[0,-5,-5],[0,1,17],[0,0,20],[0,11,-3],[0,-12,16],[1,-10,8],[1,1,1],[1,-14,-2],[0,2,-22],[1,11,1],[0,-2,8],[1,-17,-1],[1,3,23],[1,-1,-1],[0,-3,-23],[0,1,23],[1,-4,-16],[0,5,27],[0,4,16],[0,-1,-21],[1,-4,-14],[1,-15,13],[0,7,-3],[1,3,-13],[1,-10,-8],[0,-3,7],[1,0,-4],[1,-1,25],[1,9,13],[0,0,-10],[1,-5,19],[1,6,2],[1,4,2],[0,-13,9],[0,-1,25],[0,10,-22],[1,0,26],[1,-10,18],[0,7,9],[1,13,-19],[1,4,12],[1,-9,17],[1,-7,13],[0,-7,-11],[1,5,-1],[1,11,-21],[1,0,6],[0,0,28],[1,3,-3],[1,-5,17],[1,1,-27],[0,6,20],[1,-3,-3],[1,3,7],[1,-1,13],[0,-6,28],[1,-13,-3],[1,-4,-6],[1,-6,18],[0,7,11],[0,3,-23],[1,4,-20],[0,-2,-26],[0,8,-12],[1,-5,-25],[1,-12,22],[1,12,20],[1,-1,11],[0,2,16],[0,1,-23],[1,15,7],[0,-3,-13],[1,6,24],[1,15,-7],[0,-3,23],[0,-6,-16],[1,16,-2],[0,7,-7],[1,11,-15],[0,1,5],[0,-2,-14],[1,-10,0],[0,-2,-8],[0,2,0],[1,8,8],[1,13,13],[1,15,-3],[1,11,-17],[1,4,4],[0,-3,11],[1,-9,-17],[0,6,-24],[0,15,-3],[1,-8,20],[0,10,-10],[0,16,0],[1,9,-7],[0,12,0],[1,8,18],[1,10,-16],[0,-4,-2],[0,-4,12],[1,10,2],[0,14,12],[0,-11,7],[0,6,-22],[1,4,-22],[1,4,-14],[1,14,6],[0,5,-25],[0,12,2],[0,-3,19],[0,2,-4],[0,-4,16],[1,3,27],[1,-3,27],[0,-6,18],[0,0,2],[0,-3,-25],[0,8,-16],[1,8,-20],[1,-6,22],[0,-11,1],[0,5,-3],[0,3,21],[1,3,1],[1,13,1],[0,-13,-7],[0,-10,6],[0,2,-24],[1,8,-2],[0,2,4],[0,-14,6],[0,-13,-5],[0,0,-20],[0,1,-5],[0,0,18],[1,-7,19],[1,11,-7],[1,-6,14],[1,11,3],[1,1,19],[1,-14,0],[1,-4,-22],[1,5,-25],[0,-12,8],[0,-9,-3],[0,6,-10],[1,-5,-7],[1,-9,-3],[1,-6,24],[1,-16,4],[1,5,19],[0,-6,24],[0,13,17],[0,12,18],[0,8,14],[0,-1,5],[1,-8,2],[1,5,23],[1,8,6],[0,-9,-1],[0,-6,8],[0,9,-25],[1,-2,14],[1,0,-18],[0,-2,6],[0,9,7],[1,9,21],[0,3,15],[0,-10,24],[0,-8,8],[0,-8,-14],[0,-13,7],[0,-9,-13],[0,5,5],[1,6,-28],[0,-6,6],[0,0,-18],[0,-3,13],[1,-9,9],[0,15,9],[1,8,16],[0,11,13],[0,-14,10],[1,-2,24],[0,5,21],[1,-2,18],[1,2,-14],[1,15,9],[0,-12,10],[0,5,-17],[1,12,12],[0,-1,3],[1,-6,-20],[1,7,7],[1,5,-7],[0,-6,-6],[1,7,11],[0,6,-14],[0,10,-16],[0,-7,1],[1,7,-13],[0,6,-12],[0,5,17],[1,-11,11],[0,-1,-11],[0,-10,4],[1,-13,-1],[1,-6,-12],[0,-5,17],[1,12,-16],[1,-1,-15],[1,5,-3],[1,-5,-13],[1,8,14],[0,-9,1],[1,-11,-1],[1,-7,-9],[0,6,-28],[1,-8,-20],[0,9,-23],[0,-7,-19],[0,-5,1],[0,-2,18],[0,-8,-8],[0,-7,-9],[0,-12,2],[1,4,6],[0,6,6],[1,-5,9],[0,12,14],[0,-2,28],[0,8,-24],[0,7,21],[0,6,-6],[0,12,20],[0,-6,-14],[1,4,-28],[1,10,-24],[1,9,-3],[1,1,-3],[0,-2,14],[1,3,-5],[0,10,12],[1,-10,-4],[1,-7,-21],[1,6,-22],[1,-7,-17],[0,3,23],[1,-14,6],[1,-16,0],[1,-11,15],[0,15,-7],[1,14,-14],[1,16,4],[1,2,20],[1,3,-9],[1,-8,-4],[0,11,7],[1,-3,-7],[1,10,18],[0,-3,17],[1,0,-12],[1,-1,19],[0,-10,26],[0,-3,-19],[0,-2,12],[0,-14,-12],[0,13,-3],[1,15,-9],[0,-5,27],[1,-4,-24],[1,3,-21],[0,16,-4],[0,10,-24],[0,-8,28],[0,15,3],[0,-8,-18],[0,-11,-13],[0,-2,-16],[1,4,20],[1,15,-15],[0,-5,15],[0,14,-16],[1,-7,-15],[0,11,-9],[1,15,-1],[1,-7,-25],[0,15,5],[1,6,6],[1,-10,-16],[1,6,-12],[0,-14,-10],[1,1,-7],[0,10,14],[1,-9,23],[0,-8,24],[1,1,-17],[0,13,7],[0,11,3],[0,-1,9],[0,1,27],[1,1,25],[0,-9,3],[0,-16,4],[0,7,25],[1,8,-18],[1,-1,-3],[1,7,-5],[1,2,12],[0,13,1],[0,7,23],[1,9,1],[0,8,-2],[1,-11,-13],[0,4,-22],[1,12,-8],[0,8,-22],[0,2,26],[1,11,-23],[1,2,-12],[1,-5,7],[0,1,21],[1,-3,-19],[1,14,-4],[1,-10,10],[1,-9,5],[0,10,0],[0,7,-19],[1,2,-10],[0,11,-17],[0,0,24],[1,2,-2],[0,5,-23],[0,1,-21],[1,-2,-6],[0,-9,-11],[1,5,-15],[1,3,-17],[0,-10,-20],[1,-7,-23],[1,-11,-9],[1,-2,-2],[0,-9,-19],[0,-15,7],[0,4,18],[1,-4,-8],[0,3,-25],[1,4,-10],[1,-5,-1],[1,6,-24],[1,1,7],[1,-1,-23],[1,13,-9],[1,2,2],[1,-6,-16],[1,9,-19],[1,-10,-12],[1,-11,-7],[0,6,16],[1,-3,-11],[0,0,-28],[0,-4,-6],[1,9,-25],[1,-6,-6],[0,6,12],[1,1,-25],[1,9,15],[0,11,-25],[1,4,28],[1,-8,4],[0,9,-13],[0,14,-8],[0,-14,0],[0,8,16],[0,-3,25],[0,11,17],[1,0,-2],[1,12,6],[1,7,-11],[0,9,-11],[0,-14,-4],[1,-4,0],[1,8,-10],[1,4,-16],[0,-6,-20],[1,-15,9],[0,4,10],[1,10,-20],[1,4,-6],[0,-9,15],[1,-5,11],[1,1,21],[0,-6,-10],[1,9,-13],[0,1,-11],[0,3,25],[1,11,-3],[1,-14,4],[1,-6,-26],[1,-3,9],[1,12,-22],[1,-12,-14],[1,12,18],[1,-2,28],[0,1,19],[1,-7,1],[1,-4,8],[0,-6,-26],[1,-6,28],[0,-5,-17],[0,9,17],[1,-16,2],[1,13,15],[1,-13,5],[0,14,4],[1,-4,10],[1,0,-14],[1,4,16],[1,-10,-6],[1,-5,-27],[1,5,13],[0,-11,-17],[0,11,-7],[1,5,1],[0,3,-29],[1,-9,-1],[0,-9,-7],[1,13,-21],[0,4,-28],[0,9,21],[1,0,2],[1,-12,8],[0,-12,-14],[1,5,-13],[1,-7,-3],[0,-5,-3],[0,5,1],[1,11,13],[1,-8,18],[1,6,-18],[1,7,13],[0,-9,19],[1,-7,-13],[0,-6,26],[1,-1,15],[1,-1,27],[1,-3,-21],[1,-7,9],[1,-10,4],[0,3,11],[0,8,-10],[1,-14,-6],[1,10,-18],[1,-4,-4],[1,-7,7],[1,-3,21],[1,11,-25],[1,-7,29],[1,-3,7],[0,-15,3],[1,2,18],[1,6,16],[0,-2,22],[1,10,6],[0,-11,-3],[1,0,22],[1,9,9],[0,-3,-27],[0,8,26],[1,8,10],[0,0,4],[1,-13,-7],[1,-8,16],[0,-2,20],[1,-2,4],[1,1,29],[1,-13,-5],[0,7,-23],[1,-7,21],[1,-1,1],[1,10,-6],[1,-2,12],[1,2,22],[0,-8,22],[1,7,21],[1,-8,-16],[1,-9,19],[0,-2,4],[1,9,-27],[0,13,-1],[1,-6,16],[0,3,9],[1,6,-14],[0,4,-20],[0,-3,-1],[1,10,16],[0,12,10],[1,3,25],[1,-8,10],[0,14,-2],[1,-6,26],[0,8,12],[1,7,3],[0,0,-8],[0,5,19],[1,13,-23],[0,-9,-9],[1,15,1],[1,7,-9],[1,-16,8],[1,7,17],[0,-9,23],[0,12,-18],[1,9,-5],[1,-1,7],[0,-7,11],[0,-3,-21],[1,-5,15],[1,-6,12],[1,-4,22],[1,-4,14],[1,-3,13],[1,13,-3],[1,-2,16],[0,-13,3],[0,-12,4],[1,12,-4],[0,-11,-15],[1,-5,-19],[1,8,26],[1,11,9],[0,-11,11],[1,-9,15],[0,-4,-24],[0,-5,21],[1,-6,0],[0,-1,-5],[1,13,-13],[1,-8,28],[1,-7,-7],[0,-9,13],[0,-3,29],[0,-14,4],[1,-8,0],[1,3,-25],[0,1,11],[1,-2,-22],[0,-12,14],[0,-13,11],[1,14,10],[1,6,-20],[0,-16,-2],[1,9,-1],[0,1,-29],[0,13,-11],[0,-8,-6],[1,13,3],[0,10,16],[1,13,-5],[0,-5,7],[0,-10,14],[1,-6,-4],[0,-15,1],[0,6,26],[1,7,5],[1,-6,-2],[0,8,8],[0,7,1],[1,11,17],[1,-14,8],[0,8,10],[0,5,11],[0,-2,-10],[1,-2,6],[1,10,-26],[0,-17,3],[0,-3,15],[0,-16,8],[0,13,-19],[0,-8,14],[1,-7,17],[1,-9,-15],[0,11,-19],[1,6,-4],[0,1,7],[1,-4,4],[0,-8,10],[0,7,17],[0,-10,-6],[0,-2,26],[0,-1,-25],[0,-1,7],[0,4,22],[1,1,15],[1,4,-2],[1,5,-17],[0,0,16],[0,0,12],[0,-13,13],[0,5,-13],[1,-8,8],[1,9,-11],[0,-3,1],[0,-13,5],[1,14,-2],[0,4,14],[1,-5,-3],[1,9,19],[1,-9,13],[1,5,-29],[0,13,-5],[0,-9,25],[1,2,24],[1,-8,-14],[1,1,-11],[0,2,20],[1,8,2],[0,-14,-2],[0,-16,-6],[0,7,5],[0,3,-3],[0,-3,27],[1,-13,3],[1,6,14],[1,-4,-12],[0,-5,-11],[1,5,-19],[1,-1,9],[1,4,-8],[1,-6,8],[1,-2,0],[0,-7,27],[0,-10,0],[0,-11,17],[1,2,0],[1,4,0],[1,2,-24],[1,-5,25],[1,-1,5],[1,-11,-15],[0,-12,-4],[1,-9,3],[1,2,-28],[1,-11,23],[1,-4,-2],[0,-6,12],[1,-5,-21],[1,3,19],[0,6,0],[1,-11,-3],[0,3,-7],[1,-11,7],[0,-11,23],[1,1,23],[0,-11,21],[1,-8,6],[1,-9,-21],[0,-2,-22],[0,11,-23],[1,-7,3],[0,-5,-21],[0,0,-4],[1,-7,-5],[0,8,18],[0,0,-22],[0,0,-6],[0,15,-13],[0,-11,25],[1,9,-9],[1,3,-7],[0,-11,3],[1,6,18],[1,7,15],[1,4,-18],[1,1,9],[1,17,3],[0,13,-17],[1,-3,-15],[1,-7,-19],[0,4,20],[1,10,-4],[1,-8,-8],[0,-10,22],[1,3,-11],[0,-15,9],[1,-15,-1],[0,4,-24],[0,-12,-8],[0,9,15],[1,0,20],[0,-7,15],[1,4,10],[1,-14,16],[0,-1,13],[0,-9,7],[1,14,14],[0,8,-18],[0,2,-10],[1,1,-13],[1,-5,3],[0,6,10],[0,11,-5],[1,10,10],[0,-12,-10],[1,15,-5],[1,-1,-17],[1,2,-8],[0,8,-6],[0,10,6],[1,-17,5],[0,-4,-12],[1,1,13],[1,11,5],[1,-17,3],[1,11,-5],[1,10,4],[1,-2,-16],[1,-8,26],[1,-2,20],[1,-1,21],[0,13,15],[1,5,11],[0,2,-6],[0,-13,-3],[1,6,-2],[1,8,-4],[0,5,-11],[1,-1,23],[0,7,-27],[1,5,15],[1,10,-8],[0,11,11],[0,4,-6],[1,10,12],[0,-9,-5],[1,-10,22],[0,-5,5],[1,-1,-13],[1,13,-1],[0,-16,-4],[1,-14,10],[0,4,-8],[1,12,16],[0,3,3],[1,-12,12],[1,-10,24],[0,5,-9],[0,8,20],[0,-3,5],[0,10,-18],[1,-12,10],[0,9,-1],[1,-5,5],[0,-1,29],[1,8,20],[1,-9,-13],[1,3,3],[1,12,-12],[1,-9,25],[1,7,-17],[1,-4,-18],[1,12,-18],[0,-6,2],[0,-2,-18],[1,-5,-17],[0,-4,24],[0,-6,14],[0,12,16],[1,-15,-7],[0,9,-9],[1,-8,-22],[1,12,8],[0,11,-13],[0,10,18],[1,13,-15],[1,-7,5],[0,-9,5],[1,10,20],[0,7,-25],[1,-12,0],[1,0,-6],[0,-8,4],[1,8,-22],[0,3,1],[0,3,-21],[0,6,24],[1,-9,-5],[1,-11,1],[0,-5,-7],[0,3,-13],[1,12,14],[0,-2,16],[0,-9,9],[0,-12,-2],[0,7,-15],[0,-4,6],[0,-4,18],[0,-8,18],[0,9,-17],[0,-8,-4],[0,-2,-20],[1,8,0],[1,13,11],[0,4,-4],[0,-5,-15],[0,6,8],[1,2,-18],[0,-10,-12],[0,2,6],[0,-10,16],[0,4,4],[1,-2,-10],[1,-10,12],[0,-1,23],[0,12,-22],[1,14,-16],[1,-4,2],[1,14,-18],[0,-7,17],[1,7,-23],[1,-2,-8],[1,0,30],[0,12,-20],[0,-4,30],[0,5,7],[0,6,18],[0,6,-18],[0,11,-1],[0,2,14],[0,-2,-28],[0,1,29],[1,-12,-6],[0,10,-26],[0,14,8],[1,12,-20],[0,-2,-12],[0,13,-9],[0,-1,11],[0,-4,-22],[1,1,-15],[1,-11,9],[0,0,-24],[0,-8,12],[1,2,-26],[0,-11,9],[0,-8,-12],[1,-2,-4],[0,12,8],[0,7,13],[0,7,-5],[1,5,-21],[1,0,0],[1,1,11],[1,-3,17],[1,-1,3],[0,-7,19],[0,14,-4],[1,9,-17],[0,11,5],[0,-1,19],[1,-3,-25],[1,-11,5],[0,8,2],[0,2,22],[0,2,10],[0,2,28],[0,8,-20],[0,-5,-23],[0,0,0],[0,-4,10],[0,5,-27],[0,7,-9],[1,-5,13],[0,14,10],[1,-13,7],[1,-4,12],[0,2,-18],[1,-14,-4],[0,-1,1],[1,9,7],[1,-11,19],[0,1,-27],[1,3,-1],[0,-2,-4],[1,13,5],[1,14,8],[1,8,-14],[1,3,-27],[1,3,5],[0,-6,-2],[1,-4,-10],[0,9,-15],[0,0,-2],[1,-6,-8],[1,5,7],[1,3,-15],[1,2,-16],[1,5,17],[1,6,-8],[0,-7,3],[1,-13,9],[0,-14,16],[1,-6,6],[1,0,-28],[1,-1,-29],[1,10,-14],[1,-14,-8],[1,2,8],[1,15,-13],[1,-17,1],[1,0,18],[0,1,13],[1,-1,-11],[0,3,17],[1,2,16],[0,-14,12],[1,-4,-26],[1,0,16],[0,12,12],[1,9,-23],[0,-4,14],[0,2,-14],[0,0,26],[0,7,15],[1,6,26],[1,-3,15],[0,-12,20],[1,-3,-1],[1,6,-16],[0,4,26],[0,-13,19],[1,-11,21],[1,14,-8],[1,13,-11],[1,9,23],[1,7,1],[0,-10,12],[0,8,-26],[1,13,7],[0,-6,20],[1,-2,-12],[0,10,2],[1,-13,19],[0,6,4],[0,10,4],[1,1,3],[1,-2,26],[1,10,22],[0,11,21],[1,7,-7],[1,1,27],[1,0,-8],[1,-9,1],[1,-11,17],[0,-12,18],[1,-1,-25],[1,15,-11],[1,-3,19],[1,11,11],[1,5,-9],[0,4,-12],[1,11,-13],[1,8,-12],[1,-2,-20],[0,-8,-2],[1,1,-23],[1,-12,-4],[1,-8,22],[1,-4,18],[1,2,-6],[1,-16,6],[0,-1,-1],[1,-5,21],[0,6,2],[1,-12,16],[0,-4,-20],[0,-12,0],[0,-5,-25],[0,-10,-14],[1,2,-4],[0,10,20],[1,12,2],[1,16,2],[0,15,-9],[1,-14,2],[1,5,25],[0,10,10],[0,8,6],[1,5,-27],[1,-5,-9],[1,-5,-23],[1,15,11],[1,4,-26],[1,14,-10],[0,13,13],[1,0,-24],[0,3,-17],[1,7,19],[1,11,-27],[1,4,-12],[0,4,-10],[1,14,4],[0,7,7],[0,-4,26],[0,-9,-15],[0,10,-2],[0,-15,-3],[1,8,24],[0,1,-19],[0,-10,-18],[1,-9,-9],[0,0,-26],[1,14,-6],[1,-7,15],[1,12,-2],[0,1,-17],[1,-15,5],[1,7,23],[1,5,27],[1,14,2],[1,-13,11],[1,15,5],[0,-5,23],[1,-9,-7],[1,-6,20],[1,-7,11],[1,3,-19],[0,-4,20],[1,-1,29],[1,-6,-22],[1,-2,-24],[1,2,-22],[1,-10,-2],[0,2,-8],[1,-8,-6],[0,7,3],[0,5,13],[0,-10,10],[0,12,-14],[1,6,20],[0,-1,-7],[0,-3,-3],[1,-14,-10],[1,-9,11],[1,0,24],[0,1,9],[0,-6,16],[1,-13,17],[0,-4,8],[1,-1,-9],[1,6,0],[1,-3,23],[0,-13,-9],[0,12,6],[0,7,19],[1,1,-1],[1,-13,-11],[0,11,15],[1,-7,-11],[1,-7,27],[1,-12,-2],[0,-4,2],[1,0,-10],[1,7,-25],[1,-3,11],[1,16,0],[1,11,-9],[0,-15,13],[0,-6,22],[1,-1,-21],[1,3,21],[0,10,-20],[0,1,-1],[1,-13,15],[1,-12,2],[1,10,-22],[0,-9,27],[0,-13,-1],[1,-11,3],[0,-6,-4],[1,-15,11],[0,-2,10],[1,-15,7],[1,9,11],[0,1,-3],[1,-15,-3],[1,-6,-10],[1,11,-19],[0,6,-20],[0,2,8],[0,6,-26],[0,1,3],[1,5,21],[1,1,-19],[1,-13,13],[0,5,9],[0,4,2],[0,-10,-10],[0,4,8],[0,-5,13],[1,-3,-23],[1,3,17],[1,12,-14],[0,-12,22],[0,-7,-3],[0,0,-16],[0,-1,21],[1,7,9],[0,2,12],[1,-10,20],[0,10,-14],[0,0,14],[0,10,22],[0,9,-19],[0,-15,-1],[1,-4,6],[0,-5,-13],[1,-1,-5],[1,-2,10],[1,-3,-27],[0,-17,7],[1,-12,14],[1,-6,-14],[0,-11,5],[0,11,9],[0,5,25],[0,3,27],[0,4,24],[1,-10,-14],[1,-8,-18],[0,9,5],[0,5,15],[1,1,-5],[0,13,9],[0,-6,10],[1,-5,-15],[1,1,5],[1,5,-23],[1,4,8],[0,4,-2],[0,-2,30],[1,8,4],[1,-8,-10],[0,-15,5],[1,3,11],[0,-12,-16],[1,-12,-8],[1,-12,18],[1,-9,-19],[0,0,10],[0,-3,-9],[0,-7,13],[0,-1,-9],[0,-15,11],[1,5,9],[1,14,-12],[0,-2,2],[1,8,-24],[1,1,-21],[0,-15,-5],[1,7,-27],[1,-3,-13],[1,-4,-28],[1,4,18],[0,8,4],[0,-4,0],[1,9,-21],[0,-4,-26],[1,-5,29],[1,-15,1],[1,2,26],[1,5,3],[0,15,1],[1,13,-17],[0,4,-26],[1,-12,20],[0,3,13],[0,7,-11],[0,-14,8],[1,-8,14],[1,0,-22],[0,-5,3],[0,-18,2],[0,2,-2],[0,-8,-24],[0,3,-19],[0,9,-21],[0,9,1],[1,0,-16],[1,16,6],[1,4,14],[0,-7,5],[0,-9,11],[1,-10,14],[0,-5,25],[1,-7,25],[0,-9,21],[0,10,-12],[0,3,-9],[1,-10,-10],[0,13,-21],[0,-15,-9],[1,8,-8],[1,4,26],[0,-16,6],[1,8,-16],[1,-2,22],[0,13,-15],[0,5,-7],[0,4,6],[1,0,10],[1,-3,-17],[1,-2,8],[0,8,24],[1,-7,-1],[1,10,8],[1,-11,-11],[1,-6,-24],[0,-3,9],[0,-1,17],[1,-14,14],[0,3,29],[1,4,-4],[0,-1,-15],[0,-5,19],[1,-1,17],[0,-11,19],[0,-17,-1],[1,3,15],[1,2,14],[0,3,-5],[0,-11,-5],[0,15,-11],[1,-4,24],[1,5,-5],[0,-9,-17],[0,-4,28],[0,-16,10],[0,10,-4],[0,14,14],[1,-5,1],[0,-7,-7],[1,-5,-5],[1,-3,5],[1,11,19],[0,-2,-2],[1,-10,-18],[1,-3,29],[0,-15,-7],[0,13,11],[0,0,30],[1,-6,2],[1,14,0],[1,-7,-27],[0,11,-21],[0,15,7],[1,3,-23],[0,13,3],[1,-12,6],[1,-12,-10],[0,-2,24],[0,3,7],[1,13,-7],[1,6,10],[1,4,22],[0,-6,30],[1,0,12],[1,-2,-28],[0,-4,22],[1,-3,-29],[0,-7,-17],[1,2,6],[0,5,23],[1,-8,12],[1,-8,24],[1,-4,16],[0,-11,-9],[1,13,9],[0,9,23],[0,-6,-24],[0,-5,-1],[1,-4,20],[1,-2,-14],[0,-5,9],[1,-2,30],[1,7,25],[1,-14,12],[0,-6,4],[0,6,28],[1,-10,16],[0,4,12],[1,11,-11],[0,-1,-23],[1,5,5],[0,1,-15],[0,10,8],[0,-10,8],[1,6,8],[0,4,28],[1,6,-10],[1,6,-6],[0,1,1],[0,13,5],[1,0,28],[0,-12,12],[0,2,24],[1,11,21],[0,4,-16],[0,-10,-16],[1,2,4],[1,-2,-26],[1,12,-10],[1,-2,-18],[0,14,-10],[0,-13,1],[0,1,-25],[0,-10,20],[0,-5,29],[1,7,-1],[0,-7,-25],[0,-13,-13],[1,16,-4],[1,-16,-2],[1,14,12],[0,-1,15],[0,7,27],[0,16,-6],[0,12,4],[0,-7,29],[0,-1,27],[1,-15,3],[0,12,-16],[0,14,-18],[1,-6,-18],[0,2,18],[0,3,-27],[1,12,-24],[1,-3,3],[0,16,4],[0,14,2],[0,4,-14],[1,-3,1],[0,9,3],[1,3,29],[1,-1,-19],[0,9,19]],"Hmax":17,"Vmid":0.5,"rf":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.021,0.281,1.0,0.028,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.121,0.333,1.0,0.026,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.062,0.156,0.395,1.0,0.026,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.028,0.198,1.0,0.882,0.005,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.001,0.001,0.002,0.001,0.0,0.0,0.0,0.002,0.022,0.013,0.033,0.201,0.583,0.078,1.0,0.356,0.247,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.07,0.065,0.024,0.016,0.428,1.0,0.988,0.562,0.005,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.001,0.001,0.0,0.0,0.0,0.006,0.0,0.017,0.025,0.041,0.086,0.051,0.0,0.0,0.0,0.002,0.028,0.054,0.303,0.306,0.488,0.759,0.981,1.0,0.104,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.006,0.0,0.017,0.025,0.041,0.086,0.051,0.0,0.0,0.0,0.002,0.028,0.054,0.304,0.306,0.488,0.76,0.981,1.0,0.104,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.002,0.0,0.005,0.007,0.012,0.025,0.015,0.0,0.0,0.0,0.017,0.075,0.123,0.081,0.429,1.0,0.078,0.839,0.203,0.168,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.002,0.0,0.005,0.007,0.012,0.025,0.015,0.0,0.0,0.0,0.017,0.075,0.123,0.081,0.429,1.0,0.078,0.839,0.202,0.168,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.049,0.202,0.328,1.0,0.71,0.527,0.075,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.002,0.0,0.005,0.007,0.012,0.025,0.015,0.0,0.0,0.004,0.043,0.163,0.173,0.086,0.463,1.0,0.076,0.812,0.195,0.162,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.103,0.276,0.395,1.0,0.492,0.146,0.038,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.003,0.005,0.007,0.016,0.009,0.0,0.0,0.0,0.0,0.011,0.098,0.474,0.625,1.0,0.447,0.4,0.136,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.042,0.154,0.662,1.0,0.147,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.035,0.219,0.156,0.102,0.566,1.0,0.051,0.392,0.03,0.03,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.001,0.003,0.002,0.0,0.001,0.001,0.075,0.344,0.46,0.61,0.511,1.0,0.688,0.593,0.073,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.001,0.003,0.001,0.0,0.0,0.006,0.0,0.015,0.022,0.036,0.075,0.045,0.0,0.0,0.011,0.026,0.099,0.16,0.683,0.866,1.0,0.258,0.055,0.018,0.002,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.071,0.703,1.0,0.683,0.567,0.156,0.033,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.003,0.001,0.0,0.001,0.002,0.001,0.0,0.0,0.0,0.0,0.001,0.002,0.003,0.006,0.004,0.0,0.003,0.003,0.147,0.673,0.893,1.0,0.625,0.594,0.139,0.022,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.466,1.0,0.589,0.522,0.338,0.058,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.001,0.006,0.002,0.003,0.019,0.037,0.286,1.0,0.625,0.133,0.985,0.585,0.016,0.047,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.001,0.002,0.001,0.0,0.0,0.001,0.0,0.003,0.004,0.007,0.014,0.009,0.0,0.002,0.047,0.294,1.0,0.607,0.096,0.606,0.547,0.022,0.155,0.032,0.025,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.015,0.85,1.0,0.432,0.391,0.171,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.003,0.001,0.0,0.001,0.002,0.001,0.0,0.0,0.001,0.0,0.002,0.004,0.006,0.034,0.02,0.012,0.07,0.113,0.422,1.0,0.553,0.086,0.534,0.471,0.018,0.123,0.025,0.02,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.012,0.002,0.0,0.004,0.008,0.003,0.0,0.0,0.002,0.0,0.005,0.008,0.012,0.026,0.016,0.0,0.018,0.051,0.185,1.0,0.83,0.484,0.307,0.282,0.073,0.006,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.012,0.002,0.0,0.004,0.009,0.003,0.0,0.0,0.002,0.0,0.005,0.008,0.013,0.026,0.016,0.0,0.018,0.051,0.184,1.0,0.83,0.484,0.307,0.283,0.073,0.006,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.029,0.335,0.822,1.0,0.554,0.258,0.064,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.001,0.002,0.001,0.0,0.0,0.001,0.0,0.002,0.003,0.005,0.028,0.017,0.01,0.059,0.103,0.403,1.0,0.552,0.078,0.498,0.363,0.009,0.026,0.001,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,1.0,0.926,0.347,0.201,0.006,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.018,0.003,0.0,0.006,0.013,0.004,0.0,0.0,0.004,0.0,0.012,0.016,0.027,0.058,0.034,0.0,0.016,0.26,0.431,1.0,0.876,0.485,0.36,0.38,0.091,0.016,0.005,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.057,0.225,1.0,0.704,0.255,0.03,0.005,0.016,0.035,0.057,0.005,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.142,0.659,1.0,0.514,0.032,0.094,0.03,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.016,0.003,0.0,0.005,0.012,0.004,0.0,0.0,0.002,0.0,0.005,0.007,0.012,0.026,0.016,0.002,0.198,0.372,0.642,1.0,0.609,0.173,0.064,0.048,0.01,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.001,0.003,0.001,0.0,0.0,0.0,0.0,0.001,0.001,0.002,0.124,0.07,0.064,0.374,0.409,1.0,0.983,0.304,0.04,0.21,0.153,0.004,0.011,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.015,0.003,0.0,0.005,0.011,0.004,0.0,0.0,0.001,0.0,0.003,0.004,0.007,0.015,0.009,0.005,0.42,0.503,0.893,1.0,0.311,0.034,0.019,0.01,0.005,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.001,0.003,0.001,0.0,0.0,0.0,0.0,0.001,0.001,0.001,0.003,0.002,0.0,0.226,0.694,1.0,0.79,0.149,0.005,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.017,0.808,0.933,1.0,0.798,0.549,0.067,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.08,0.019,0.058,0.408,0.384,1.0,0.607,0.065,0.007,0.002,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.001,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.134,0.075,0.071,0.417,0.438,1.0,0.7,0.103,0.011,0.017,0.012,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.001,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.134,0.075,0.071,0.417,0.438,1.0,0.7,0.103,0.011,0.017,0.012,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.004,0.001,0.0,0.001,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.134,0.075,0.071,0.417,0.438,1.0,0.7,0.103,0.011,0.017,0.012,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.044,0.603,1.0,0.747,0.376,0.065,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.044,0.603,1.0,0.746,0.376,0.065,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.032,0.006,0.0,0.011,0.024,0.008,0.0,0.0,0.001,0.0,0.002,0.003,0.005,0.394,0.71,0.169,1.0,0.874,0.357,0.716,0.328,0.176,0.111,0.1,0.026,0.002,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.086,1.0,0.634,0.188,0.004,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.017,0.003,0.0,0.006,0.013,0.004,0.0,0.0,0.0,0.0,0.001,0.001,0.002,0.33,0.419,0.133,1.0,0.918,0.37,0.343,0.032,0.005,0.002,0.002,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.005,0.001,0.0,0.002,0.003,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.207,0.35,1.0,0.567,0.116,0.063,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.031,0.006,0.0,0.01,0.023,0.007,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.403,0.789,0.181,1.0,0.847,0.273,0.372,0.037,0.005,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.0,0.0,0.007,0.0,0.0,0.0,0.0,0.0,0.0,0.391,1.0,0.003,0.007,0.073,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.281,0.428,0.484,1.0,0.075,0.001,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.315,0.316,0.792,0.282,0.034,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.001,0.002,0.012,0.067,0.101,0.341,1.0,0.461,0.681,0.508,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.044,0.042,0.146,1.0,0.625,0.593,0.028,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.007,0.012,0.03,0.072,0.156,0.259,0.354,0.906,1.0,0.593,0.054,0.001,0.001,0.001,0.002,0.001,0.0,0.0,0.013,0.008,0.0,0.045,0.0,0.049,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.002,0.025,0.1,0.262,0.158,0.436,1.0,0.365,0.561,0.361,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.001,0.0,0.006,0.0,0.007,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.029,0.115,0.295,0.167,0.452,1.0,0.348,0.541,0.336,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.001,0.0,0.007,0.0,0.008,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.091,0.379,0.609,1.0,0.548,0.311,0.103,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.024,0.051,0.083,0.188,0.373,0.382,0.419,0.931,1.0,0.592,0.054,0.002,0.001,0.001,0.005,0.002,0.001,0.0,0.016,0.01,0.0,0.054,0.0,0.059,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.007,0.022,0.029,0.072,0.209,0.675,0.727,0.512,1.0,0.638,0.234,0.009,0.003,0.002,0.002,0.008,0.004,0.001,0.0,0.017,0.01,0.0,0.055,0.0,0.06,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.021,0.076,0.058,0.228,0.446,0.725,0.245,0.553,1.0,0.321,0.496,0.314,0.0,0.0,0.0,0.001,0.001,0.0,0.0,0.003,0.002,0.0,0.01,0.0,0.011,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.004,0.023,0.057,0.515,1.0,0.618,0.858,0.153,0.019,0.0,0.001,0.0,0.0,0.001,0.001,0.0,0.0,0.006,0.004,0.0,0.02,0.0,0.022,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.089,0.851,1.0,0.478,0.114,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.001,0.001,0.044,0.183,0.11,0.389,0.684,1.0,0.261,0.479,0.657,0.193,0.291,0.207,0.001,0.001,0.001,0.003,0.001,0.0,0.0,0.003,0.002,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.021,0.136,0.101,0.377,0.671,1.0,0.251,0.431,0.495,0.115,0.176,0.121,0.001,0.0,0.0,0.002,0.001,0.0,0.0,0.003,0.002,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.01,0.028,0.577,1.0,0.546,0.295,0.148,0.072,0.041,0.014,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.025,0.058,0.277,0.563,1.0,0.291,0.523,0.428,0.022,0.003,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.002,0.001,0.068,0.234,0.12,0.41,0.709,1.0,0.242,0.419,0.487,0.115,0.176,0.121,0.001,0.001,0.001,0.003,0.001,0.001,0.0,0.003,0.002,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.01,0.029,0.584,1.0,0.502,0.217,0.016,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.014,0.078,0.181,0.24,0.535,1.0,0.569,0.305,0.141,0.026,0.012,0.003,0.005,0.003,0.003,0.013,0.006,0.002,0.0,0.015,0.008,0.0,0.043,0.0,0.047,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.005,0.304,0.512,1.0,0.306,0.097,0.024,0.006,0.002,0.0,0.001,0.001,0.001,0.002,0.001,0.0,0.0,0.003,0.002,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.097,0.217,0.529,1.0,0.333,0.073,0.012,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.003,0.077,0.263,0.471,1.0,0.249,0.051,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.002,0.003,0.151,0.235,0.183,0.615,0.968,1.0,0.141,0.28,0.193,0.024,0.028,0.021,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.01,0.059,0.153,0.527,0.652,0.522,0.901,1.0,0.153,0.116,0.025,0.013,0.016,0.006,0.011,0.007,0.007,0.03,0.014,0.005,0.0,0.014,0.005,0.0,0.028,0.0,0.03,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.011,0.095,0.253,0.576,0.572,0.557,0.901,1.0,0.1,0.104,0.022,0.015,0.01,0.004,0.006,0.004,0.004,0.018,0.008,0.003,0.0,0.01,0.004,0.0,0.022,0.0,0.025,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.011,0.019,0.319,0.974,0.905,1.0,0.44,0.022,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.016,0.071,0.201,0.486,0.743,0.68,0.568,0.903,1.0,0.134,0.112,0.024,0.014,0.015,0.006,0.009,0.006,0.006,0.027,0.012,0.005,0.0,0.013,0.005,0.0,0.026,0.0,0.029,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.025,0.357,0.826,1.0,0.54,0.137,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.708,1.0,0.919,0.768,0.307,0.007,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.013,0.01,0.454,1.0,0.236,0.499,0.685,0.461,0.023,0.033,0.006,0.0,0.003,0.002,0.002,0.001,0.001,0.005,0.002,0.001,0.0,0.002,0.001,0.0,0.003,0.0,0.004,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.053,0.197,0.651,1.0,0.9,0.439,0.299,0.0,0.0,0.0,0.0,0.003,0.001,0.002,0.001,0.001,0.005,0.002,0.001,0.0,0.002,0.001,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.007,0.049,0.016,0.476,1.0,0.228,0.478,0.649,0.435,0.022,0.031,0.006,0.0,0.003,0.002,0.002,0.001,0.001,0.005,0.002,0.001,0.0,0.002,0.001,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.042,0.189,0.562,1.0,0.986,0.841,0.388,0.264,0.0,0.0,0.0,0.0,0.002,0.001,0.001,0.001,0.001,0.005,0.002,0.001,0.0,0.002,0.0,0.0,0.002,0.0,0.003,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.024,0.23,0.403,0.884,1.0,0.814,0.591,0.384,0.241,0.022,0.019,0.0,0.002,0.018,0.007,0.012,0.008,0.008,0.035,0.016,0.006,0.0,0.009,0.001,0.0,0.006,0.0,0.007,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.106,0.142,1.0,0.447,0.163,0.018,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.112,0.545,0.59,1.0,0.848,0.612,0.43,0.275,0.175,0.034,0.04,0.075,0.085,0.07,0.013,0.014,0.01,0.01,0.04,0.018,0.007,0.0,0.01,0.001,0.0,0.008,0.0,0.009,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.009,0.09,0.028,0.678,1.0,0.114,0.128,0.106,0.026,0.001,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.058,0.936,1.0,0.956,0.343,0.0,0.0,0.044,0.418,0.492,0.235,0.056,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.001,0.03,0.137,0.412,1.0,0.379,0.047,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.005,0.11,0.352,0.946,1.0,0.243,0.11,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.055,0.206,0.434,1.0,0.667,0.191,0.112,0.005,0.001,0.0,0.0,0.0,0.0,0.002,0.001,0.001,0.001,0.001,0.004,0.002,0.001,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.12,0.612,0.112,0.825,1.0,0.09,0.145,0.069,0.031,0.002,0.002,0.0,0.0,0.004,0.002,0.003,0.002,0.002,0.008,0.004,0.001,0.0,0.002,0.0,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.127,0.644,0.117,0.845,1.0,0.082,0.126,0.035,0.008,0.0,0.0,0.0,0.0,0.004,0.002,0.003,0.002,0.002,0.008,0.004,0.002,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.127,0.644,0.117,0.845,1.0,0.082,0.125,0.035,0.008,0.0,0.0,0.0,0.0,0.004,0.002,0.003,0.002,0.002,0.008,0.004,0.001,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.215,0.894,0.755,1.0,0.498,0.232,0.133,0.071,0.034,0.002,0.0,0.0,0.0,0.021,0.008,0.014,0.01,0.01,0.04,0.018,0.007,0.0,0.009,0.0,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.215,0.894,0.755,1.0,0.498,0.233,0.133,0.071,0.034,0.002,0.0,0.0,0.0,0.021,0.008,0.014,0.01,0.01,0.04,0.018,0.007,0.0,0.009,0.0,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.002,0.179,0.832,1.0,0.282,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.281,1.0,0.152,0.784,0.607,0.034,0.048,0.011,0.001,0.0,0.0,0.0,0.0,0.002,0.001,0.002,0.001,0.001,0.004,0.002,0.001,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.058,0.936,1.0,0.957,0.343,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.007,0.669,1.0,0.767,0.035,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.808,1.0,0.063,0.014,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.871,1.0,0.04,0.009,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]],"pref":[123,121,120,118,110,108,105,105,100,100,99,97,94,93,90,90,89,82,80,74,73,71,71,68,67,66,66,64,64,63,63,62,55,52,48,46,45,44,41,40,40,40,39,39,34,30,27,26,23,23,16,12,-17,-19,-22,-23,-24,-26,-27,-34,-36,-38,-46,-46,-49,-50,-51,-52,-54,-55,-57,-58,-59,-62,-70,-72,-74,-76,-78,-78,-80,-81,-81,-86,-90,-92,-93,-96,-96,-97,-101,-103,-104,-105,-105,-108,-108,-109,-112,-113,-114,-129,-129],"type":["ER2","ER2","ER2","ER2","ER4m","ER2","ER3w","ER3w","ER5","ER5","ER2","ER5","ER2","ER2","ER2","ER4m","ER2","ER3w","ER2","ER2","ER2","ER4m","ER5","ER2","ER5","ER3w","ER3w","ER2","ER5","ER2","ER3w","ER4d","ER4m","ER3w","ER5","ER3w","ER3w","ER2","ER4m","ER5","ER5","ER5","ER2","ER2","ER3w","ER2","ER3w","ER2","ER3w","ER3p_a","ER2","ER4m","ER4m","ER2","ER3w","ER5","ER5","ER2","ER3w","ER3w","ER5","ER3w","ER2","ER5","ER5","ER2","ER4m","ER5","ER2","ER3w","ER3w","ER4d","ER2","ER4m","ER3w","ER3w","ER2","ER3w","ER2","ER2","ER5","ER2","ER5","ER2","ER3w","ER2","ER3w","ER4m","ER2","ER2","ER2","ER2","ER5","ER5","ER5","ER3w","ER3w","ER2","ER4m","ER2","ER2","ER2","ER2"]}, OT = {"glomeruli": ["DM1", "DM4", "DP1m", "VA2", "DM2", "VM2", "DM3", "DA2"], "rA": [0, 15, 30, 60, 100, 150], "rB": [0, 50, 150, 300], "pn": {"0,0": {"DM1": 0.0, "DM4": 0.0, "DP1m": 0.0, "VA2": 0.0, "DM2": 0.0, "VM2": 0.0, "DM3": 0.0, "DA2": 0.0}, "0,50": {"DM1": 0.0, "DM4": 0.0, "DP1m": 0.0, "VA2": 0.0, "DM2": 0.0, "VM2": 0.0, "DM3": 0.0, "DA2": 5.6}, "0,150": {"DM1": 0.0, "DM4": 0.0, "DP1m": 0.0, "VA2": 0.0, "DM2": 0.0, "VM2": 0.0, "DM3": 0.0, "DA2": 80.8}, "0,300": {"DM1": 0.0, "DM4": 0.0, "DP1m": 0.0, "VA2": 0.0, "DM2": 0.0, "VM2": 0.0, "DM3": 0.0, "DA2": 147.9}, "15,0": {"DM1": 74.0, "DM4": 15.5, "DP1m": 4.7, "VA2": 11.0, "DM2": 0.5, "VM2": 0.0, "DM3": 0.0, "DA2": 0.0}, "15,50": {"DM1": 72.5, "DM4": 16.2, "DP1m": 4.3, "VA2": 10.5, "DM2": 0.8, "VM2": 0.0, "DM3": 0.0, "DA2": 3.7}, "15,150": {"DM1": 70.5, "DM4": 15.0, "DP1m": 4.0, "VA2": 11.0, "DM2": 0.2, "VM2": 0.0, "DM3": 0.0, "DA2": 78.6}, "15,300": {"DM1": 54.0, "DM4": 7.5, "DP1m": 4.0, "VA2": 8.0, "DM2": 0.0, "VM2": 0.0, "DM3": 0.0, "DA2": 144.6}, "30,0": {"DM1": 127.5, "DM4": 25.2, "DP1m": 7.5, "VA2": 28.0, "DM2": 3.0, "VM2": 0.0, "DM3": 0.0, "DA2": 0.0}, "30,50": {"DM1": 127.0, "DM4": 24.2, "DP1m": 7.8, "VA2": 24.5, "DM2": 1.5, "VM2": 0.0, "DM3": 0.0, "DA2": 2.0}, "30,150": {"DM1": 122.0, "DM4": 21.2, "DP1m": 8.3, "VA2": 23.0, "DM2": 0.5, "VM2": 0.0, "DM3": 0.0, "DA2": 73.3}, "30,300": {"DM1": 118.0, "DM4": 18.8, "DP1m": 8.5, "VA2": 21.5, "DM2": 0.2, "VM2": 0.0, "DM3": 0.0, "DA2": 143.6}, "60,0": {"DM1": 202.0, "DM4": 60.8, "DP1m": 23.3, "VA2": 92.0, "DM2": 9.8, "VM2": 4.8, "DM3": 0.0, "DA2": 0.0}, "60,50": {"DM1": 201.0, "DM4": 60.2, "DP1m": 23.2, "VA2": 90.5, "DM2": 10.5, "VM2": 4.8, "DM3": 0.0, "DA2": 2.0}, "60,150": {"DM1": 199.0, "DM4": 57.5, "DP1m": 22.8, "VA2": 90.5, "DM2": 10.5, "VM2": 4.8, "DM3": 0.0, "DA2": 73.3}, "60,300": {"DM1": 198.5, "DM4": 55.8, "DP1m": 21.3, "VA2": 92.0, "DM2": 9.2, "VM2": 5.0, "DM3": 0.0, "DA2": 143.9}, "100,0": {"DM1": 273.5, "DM4": 110.2, "DP1m": 54.2, "VA2": 166.0, "DM2": 31.8, "VM2": 27.5, "DM3": 0.0, "DA2": 0.0}, "100,50": {"DM1": 272.5, "DM4": 109.5, "DP1m": 54.0, "VA2": 165.0, "DM2": 31.8, "VM2": 27.2, "DM3": 0.0, "DA2": 1.5}, "100,150": {"DM1": 272.0, "DM4": 108.5, "DP1m": 52.0, "VA2": 165.0, "DM2": 31.8, "VM2": 27.0, "DM3": 0.0, "DA2": 72.9}, "100,300": {"DM1": 272.0, "DM4": 106.5, "DP1m": 51.7, "VA2": 164.0, "DM2": 30.2, "VM2": 26.8, "DM3": 0.0, "DA2": 143.4}, "150,0": {"DM1": 325.0, "DM4": 151.5, "DP1m": 101.2, "VA2": 228.0, "DM2": 64.0, "VM2": 55.2, "DM3": 0.0, "DA2": 0.0}, "150,50": {"DM1": 325.0, "DM4": 151.2, "DP1m": 102.0, "VA2": 227.0, "DM2": 63.8, "VM2": 55.2, "DM3": 0.0, "DA2": 0.9}, "150,150": {"DM1": 325.5, "DM4": 150.5, "DP1m": 102.5, "VA2": 228.0, "DM2": 63.0, "VM2": 54.8, "DM3": 0.0, "DA2": 71.5}, "150,300": {"DM1": 325.0, "DM4": 150.2, "DP1m": 101.5, "VA2": 228.0, "DM2": 62.0, "VM2": 54.2, "DM3": 0.0, "DA2": 142.9}}, "kc_frac": {"0,0": 0.0, "0,50": 0.0, "0,150": 0.0, "0,300": 0.0, "15,0": 0.0, "15,50": 0.0, "15,150": 0.0, "15,300": 0.0, "30,0": 0.0, "30,50": 0.0, "30,150": 0.0, "30,300": 0.0, "60,0": 0.0069, "60,50": 0.0067, "60,150": 0.0068, "60,300": 0.0061, "100,0": 0.0183, "100,50": 0.019, "100,150": 0.0178, "100,300": 0.0178, "150,0": 0.0293, "150,50": 0.0303, "150,150": 0.0297, "150,300": 0.0296}, "active": {"0,0": 0, "0,50": 44, "0,150": 57, "0,300": 75, "15,0": 728, "15,50": 759, "15,150": 784, "15,300": 747, "30,0": 852, "30,50": 880, "30,150": 878, "30,300": 882, "60,0": 986, "60,50": 1018, "60,150": 1020, "60,300": 1011, "100,0": 1108, "100,50": 1144, "100,150": 1163, "100,300": 1152, "150,0": 1277, "150,50": 1328, "150,150": 1335, "150,300": 1338}, "read": {"0,0": {"LHPD4d1": 0.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "0,50": {"LHPD4d1": 0.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "0,150": {"LHPD4d1": 0.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "0,300": {"LHPD4d1": 0.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "15,0": {"LHPD4d1": 8.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "15,50": {"LHPD4d1": 7.5, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "15,150": {"LHPD4d1": 6.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "15,300": {"LHPD4d1": 7.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "30,0": {"LHPD4d1": 23.5, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "30,50": {"LHPD4d1": 23.5, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "30,150": {"LHPD4d1": 22.5, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "30,300": {"LHPD4d1": 23.0, "MBON31": 0.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "60,0": {"LHPD4d1": 89.5, "MBON31": 16.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "60,50": {"LHPD4d1": 87.5, "MBON31": 14.5, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "60,150": {"LHPD4d1": 88.0, "MBON31": 14.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "60,300": {"LHPD4d1": 87.0, "MBON31": 14.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "100,0": {"LHPD4d1": 157.5, "MBON31": 25.5, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "100,50": {"LHPD4d1": 157.0, "MBON31": 26.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "100,150": {"LHPD4d1": 155.0, "MBON31": 26.5, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "100,300": {"LHPD4d1": 155.0, "MBON31": 25.5, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "150,0": {"LHPD4d1": 211.0, "MBON31": 31.5, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "150,50": {"LHPD4d1": 211.5, "MBON31": 32.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "150,150": {"LHPD4d1": 211.5, "MBON31": 32.0, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}, "150,300": {"LHPD4d1": 213.0, "MBON31": 31.5, "LHPD4b1b": 0.0, "LHAV4d1": 0.0}}, "dna02": {"0,0": {"left": 0.0, "right": 0.0}, "0,50": {"left": 0.0, "right": 0.0}, "0,150": {"left": 0.0, "right": 0.0}, "0,300": {"left": 0.0, "right": 0.0}, "15,0": {"left": 1.0, "right": 0.0}, "15,50": {"left": 0.0, "right": 0.0}, "15,150": {"left": 1.0, "right": 0.0}, "15,300": {"left": 1.0, "right": 0.0}, "30,0": {"left": 17.0, "right": 0.0}, "30,50": {"left": 1.0, "right": 0.0}, "30,150": {"left": 10.0, "right": 0.0}, "30,300": {"left": 5.0, "right": 0.0}, "60,0": {"left": 0.0, "right": 0.0}, "60,50": {"left": 0.0, "right": 0.0}, "60,150": {"left": 0.0, "right": 0.0}, "60,300": {"left": 0.0, "right": 0.0}, "100,0": {"left": 0.0, "right": 0.0}, "100,50": {"left": 0.0, "right": 0.0}, "100,150": {"left": 0.0, "right": 0.0}, "100,300": {"left": 0.0, "right": 0.0}, "150,0": {"left": 0.0, "right": 0.0}, "150,50": {"left": 0.0, "right": 0.0}, "150,150": {"left": 0.0, "right": 0.0}, "150,300": {"left": 0.0, "right": 0.0}}}, MB = {"about":"KC 集合与 KC→MBON 突触来自 FlyWire + ln_fix 全脑模型(ALPN→KC ×2 校准,使醋味激活 ~6% KC)。odors[o].active[i] = 在 levels[i](ORN Hz)时亮的 KC 下标。comps = 学习隔室。","nkc_total":5177,"kc_class":["ab","ab","ab","ab","g","g","ab","ab","ab","ab","g","ab","ab","g","g","ab","g","ab","g","g","ab","g","g","ab","ab","ab","ab","ab","ab","g","g","ab","g","ab","ab","ab","ab","g","ab","g","ab","ab","g","ab","ab","ab","g","ab","ab","ab","ab","ab","ab","ab","ab","ab","g","g","ab","g","g","ab","g","g","apbp","g","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","g","ab","ab","ab","ab","g","ab","ab","g","g","ab","g","ab","ab","ab","ab","ab","ab","ab","g","ab","g","ab","g","g","ab","g","ab","ab","ab","g","ab","ab","ab","g","ab","ab","ab","ab","ab","ab","g","ab","ab","g","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","g","g","ab","g","g","ab","g","g","g","ab","g","g","ab","g","ab","ab","ab","g","ab","ab","ab","g","ab","ab","ab","g","ab","g","g","ab","ab","ab","g","ab","ab","ab","ab","ab","ab","ab","g","ab","ab","ab","ab","g","ab","g","ab","ab","ab","ab","ab","ab","ab","ab","ab","g","g","ab","ab","ab","g","ab","ab","ab","ab","ab","ab","ab","ab","g","ab","g","ab","ab","g","ab","g","g","ab","ab","g","g","g","ab","ab","g","g","g","ab","ab","ab","ab","ab","ab","ab","g","g","ab","ab","ab","ab","ab","g","ab","g","ab","ab","g","ab","ab","ab","apbp","ab","ab","g","ab","ab","ab","ab","ab","g","g","ab","ab","ab","ab","ab","ab","ab","ab","ab","g","g","ab","ab","ab","g","ab","g","ab","g","g","ab","ab","g","g","ab","ab","ab","g","ab","g","ab","ab","ab","g","ab","g","g","g","ab","g","ab","ab","ab","ab","ab","ab","ab","g","ab","ab","ab","ab","g","ab","ab","ab","g","g","g","ab","ab","ab","ab","ab","ab","g","ab","g","g","ab","g","g","ab","ab","ab","g","ab","ab","ab","g","ab","ab","ab","apbp","ab","ab","g","ab","ab","g","ab","g","ab","ab","ab","ab","g","g","g","ab","ab","g","ab","ab","g","ab","ab","ab","g","g","ab","ab","g","ab","ab","ab","ab","ab","ab","ab","ab","g","ab","g","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","ab","g","g","g","g","ab","ab","ab","ab","g","ab","ab","ab","g","ab","ab","g","ab","ab","ab","ab","ab","ab","g","ab","ab","ab","apbp","g","ab","g","ab","ab","ab","ab","g","ab","g","g","ab","ab","ab","ab","ab","ab","g","ab","g","ab","ab","ab","ab","ab","ab","g","ab","ab","ab","ab","g","ab","g","ab","g","ab","ab","ab","g","ab","ab","ab","ab","ab","ab","g","ab","ab","g","ab","ab","ab","g","ab","g","g","g","ab","ab","g","ab","ab","ab","ab","ab","ab","ab","g","ab","ab","ab","ab","g","ab","ab","ab","ab","g","ab","g","ab","ab","ab","ab","g","ab","g","ab","ab","ab","ab","ab","g","g","ab","ab","g","g","ab","g","ab","g","ab","ab","ab","ab","g","ab","ab","ab","g","ab","ab","ab","g","ab","ab","g","g","ab","g","ab","ab","ab","g","g","ab","g","ab","g","g","g","ab","g","ab","ab","g","ab","ab","g","ab","g","g","ab","g","ab","ab","ab","g","ab","ab","g","ab","ab","g","g","ab","ab","ab","ab","g","ab","ab","ab","g","g","g","g","ab"],"odors":{"vinegar":{"levels":[30,60,100,150],"active":[[22,32,40,82,87,88,90,105,111,112,123,125,132,151,156,158,160,164,167,169,177,180,182,195,197,198,199,204,209,214,219,225,230,234,245,253,261,283,289,309,312,324,336,350,358,364,365,377,382,387,393,418,420,426,432,435,445,464,471,479,488,491,522,525,529,534,543,544,546,548,555,563,569,570,575,580],[1,3,8,9,12,15,16,18,19,20,22,23,26,31,32,33,34,36,38,40,43,48,51,52,56,61,63,67,68,73,82,84,87,88,90,100,103,104,105,106,109,111,112,123,124,125,130,132,135,146,151,152,156,157,158,160,164,165,167,169,176,177,180,182,186,187,189,191,195,197,198,199,200,203,204,209,214,219,225,226,229,230,232,234,236,241,245,246,247,253,259,261,265,268,269,271,283,289,299,300,301,304,308,309,312,318,324,336,337,338,340,348,350,358,364,365,376,377,382,384,387,391,393,398,402,413,417,418,420,426,427,429,432,435,439,444,445,446,454,455,459,462,464,469,471,472,473,479,480,482,483,484,488,491,495,497,512,514,518,520,522,525,526,529,531,534,535,536,543,544,545,546,548,549,555,559,563,565,567,569,570,571,575,580,584,586],[0,1,2,3,7,8,9,12,15,16,17,18,19,20,22,23,26,31,32,33,34,36,38,40,41,43,45,48,51,52,53,54,56,58,59,61,63,67,68,73,75,76,79,80,82,84,87,88,90,93,94,96,100,103,104,105,106,109,111,112,115,117,119,123,124,125,127,130,132,135,142,143,146,151,152,154,155,156,157,158,160,162,164,165,167,168,169,170,172,173,176,177,178,180,182,185,186,187,189,191,195,196,197,198,199,200,203,204,207,209,214,219,224,225,226,227,229,230,232,234,235,236,241,245,246,247,248,253,255,258,259,261,265,266,268,269,270,271,275,283,288,289,296,299,300,301,304,308,309,311,312,317,318,324,331,332,334,335,336,337,338,339,340,343,345,348,350,353,358,361,364,365,368,371,373,374,375,376,377,378,382,383,384,387,391,393,398,399,401,402,404,410,413,415,417,418,420,422,424,426,427,429,432,435,436,437,438,439,440,443,444,445,446,448,450,451,452,454,455,456,458,459,462,464,469,471,472,473,475,477,479,480,482,483,484,485,486,487,488,490,491,492,493,495,497,498,500,504,505,507,509,511,512,514,516,518,519,520,522,525,526,529,531,533,534,535,536,540,543,544,545,546,548,549,550,555,559,560,562,563,564,565,567,568,569,570,571,574,575,578,580,581,582,584,585,586,588],[0,1,2,3,4,5,7,8,9,11,12,15,16,17,18,19,20,22,23,24,25,26,28,31,32,33,34,36,37,38,40,41,42,43,44,45,47,48,49,51,52,53,54,55,56,58,59,61,63,64,66,67,68,71,73,74,75,76,77,79,80,81,82,84,85,87,88,90,91,92,93,94,96,97,100,102,103,104,105,106,107,108,109,111,112,113,114,115,116,117,118,119,120,121,123,124,125,126,127,128,129,130,131,132,133,135,136,137,138,142,143,145,146,147,148,151,152,154,155,156,157,158,159,160,162,163,164,165,167,168,169,170,171,172,173,176,177,178,180,182,183,184,185,186,187,188,189,191,194,195,196,197,198,199,200,201,202,203,204,207,209,211,212,214,215,219,224,225,226,227,228,229,230,231,232,234,235,236,237,238,241,242,243,244,245,246,247,248,249,251,252,253,255,256,257,258,259,261,262,263,264,265,266,268,269,270,271,273,275,278,281,282,283,284,288,289,290,292,293,295,296,297,299,300,301,302,303,304,307,308,309,310,311,312,317,318,319,320,321,324,325,326,327,329,330,331,332,334,335,336,337,338,339,340,341,343,344,345,346,347,348,350,351,352,353,354,355,358,359,361,362,364,365,367,368,369,371,373,374,375,376,377,378,380,382,383,384,385,386,387,388,389,391,393,395,397,398,399,401,402,403,404,405,407,408,410,411,413,414,415,416,417,418,420,421,422,424,425,426,427,429,432,433,435,436,437,438,439,440,441,442,443,444,445,446,448,449,450,451,452,453,454,455,456,458,459,460,462,463,464,465,466,468,469,470,471,472,473,474,475,477,479,480,481,482,483,484,485,486,487,488,489,490,491,492,493,495,496,497,498,500,502,503,504,505,506,507,508,509,510,511,512,513,514,515,516,517,518,519,520,522,523,524,525,526,528,529,530,531,533,534,535,536,537,538,539,540,542,543,544,545,546,548,549,550,554,555,557,559,560,561,562,563,564,565,566,567,568,569,570,571,572,574,575,576,577,578,580,581,582,583,584,585,586,588,589,590]]},"C":{"levels":[30,60,100,150],"active":[[],[129,254,394,553],[14,21,30,35,50,89,101,104,129,141,149,153,166,174,181,190,206,210,217,218,223,239,250,254,277,285,333,357,370,394,396,400,428,430,447,494,527,553,587],[6,10,13,14,21,29,30,35,46,50,57,62,69,70,72,78,89,95,98,101,104,122,129,134,141,149,153,161,166,174,179,181,190,205,206,208,210,216,217,218,221,223,239,240,250,254,267,274,276,277,285,286,287,290,291,305,306,313,314,315,316,323,328,333,349,357,360,363,369,370,372,381,392,394,396,400,406,409,412,428,430,447,457,467,494,499,521,527,532,547,551,552,553,556,573,587]]}},"comps":[{"name":"γ1pedc","mbons":["MBON11"],"val":1,"group":"pun","eta":0.5,"tau":600,"g":0.4,"conf":"confirmed","dans":"PPL101","why":"Das 2014:掺驱避剂的糖→短时厌恶记忆需要它;MB112C 激活→趋近","w0":[0,0,0,5,7,8,0,0,6,5,5,5,8,0,7,7,7,8,10,10,0,0,14,0,0,0,6,0,0,0,10,5,8,6,0,0,0,5,0,6,0,9,6,5,0,0,13,5,6,6,0,10,0,0,0,5,0,0,7,5,6,0,8,9,0,5,0,0,5,6,6,6,0,6,0,0,0,0,0,0,6,0,0,5,0,0,9,5,0,13,0,0,7,0,0,0,0,6,0,5,0,6,9,0,6,0,0,5,0,11,7,6,9,0,5,0,5,5,0,0,7,6,5,6,6,0,8,7,0,6,0,5,7,8,0,0,0,6,7,0,5,6,6,0,10,8,6,7,0,0,0,5,0,0,0,9,5,0,0,5,6,0,5,8,7,9,8,0,0,5,0,7,0,11,6,0,6,8,7,5,5,5,0,0,12,7,0,0,0,0,0,8,0,8,0,7,5,6,0,0,6,0,0,8,0,9,0,7,0,0,5,0,11,8,7,6,5,7,0,0,8,6,5,5,0,5,9,0,0,0,0,11,10,0,6,0,0,8,0,0,7,0,0,11,5,0,0,0,5,8,8,7,5,0,0,0,5,7,0,7,0,0,0,9,0,0,0,8,10,6,5,0,7,0,5,7,10,7,5,7,0,10,0,0,10,5,0,6,7,0,0,5,6,0,0,0,0,7,8,0,0,5,0,6,0,0,6,5,0,0,0,0,6,0,0,0,6,0,0,6,0,0,0,6,5,10,7,0,5,12,5,0,8,7,0,0,0,5,5,0,0,0,0,6,8,0,0,7,6,5,5,0,10,0,6,12,8,0,0,8,5,8,8,0,7,7,0,7,5,0,6,13,0,0,0,0,5,0,5,0,0,0,7,0,7,0,5,0,0,0,0,0,0,5,0,5,5,5,0,0,0,0,6,0,6,0,0,6,6,6,0,0,0,6,0,0,5,5,0,0,0,10,0,7,0,0,0,0,6,6,0,0,0,8,0,0,0,0,11,0,10,0,5,0,0,6,0,7,7,10,0,0,5,0,8,0,10,0,6,6,6,6,0,7,0,0,0,0,0,0,5,0,0,0,8,0,8,8,10,0,0,5,0,0,8,0,0,0,5,6,0,5,0,0,5,0,5,7,0,8,0,9,0,6,0,0,0,0,7,6,5,0,6,0,10,5,9,5,5,0,5,7,0,12,0,0,0,0,0,0,0,0,0,11,0,0,0,0,0,7,6,6,6,5,7,0,0,6,7,8,0,7,7,7,0,8,0,0,7,0,5,0,5,13,6,0,8,0,0,0,0,0,0,0,0,0,0,8,6,5,6,11,7,0,6,0,9,6,7,6,5]},{"name":"γ2","mbons":["MBON12"],"val":1,"group":"pun","eta":0.5,"tau":600,"g":0.4,"conf":"confirmed","dans":"PPL103","why":"MB077B 激活→趋近;PPL1-γ2α'1 是惩罚(对苦味的反应未确认)","w0":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,5,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"name":"α2","mbons":["MBON18"],"val":1,"group":"pun","eta":0.3,"tau":1800,"g":0.2,"conf":"assumption","dans":"PPL105","why":"方向靠推断;Masek 2015:α 叶两类 PPL1 共同负责苦味记忆","w0":[0,10,0,6,0,0,10,13,7,11,0,5,7,0,0,5,0,9,0,0,12,0,0,5,16,7,11,9,8,0,0,8,0,9,7,8,6,0,7,0,9,15,0,7,6,0,0,5,9,9,0,18,7,0,0,10,0,0,6,0,0,9,0,0,0,0,8,5,6,7,0,0,0,8,10,5,12,0,0,6,7,10,10,0,7,6,0,0,0,0,7,0,9,9,0,5,7,0,0,0,0,0,0,7,0,0,6,6,0,0,7,10,0,0,10,0,12,0,0,0,7,5,0,8,10,6,0,11,8,8,9,8,6,8,0,0,15,0,0,10,0,0,0,0,0,0,8,0,0,5,0,0,5,0,5,0,0,0,6,0,8,0,0,0,6,10,0,5,6,5,9,6,6,5,0,10,0,9,6,0,5,0,6,13,0,5,0,9,6,5,6,0,0,11,0,6,0,5,5,5,10,5,6,7,6,0,7,0,5,10,0,8,0,0,7,6,0,0,0,8,10,0,0,0,6,0,10,6,0,7,8,0,0,0,12,7,8,7,0,7,0,7,6,0,6,8,6,0,11,10,0,11,6,8,7,0,0,0,6,0,6,7,7,6,10,9,5,0,0,8,6,12,0,7,0,0,0,0,8,14,0,0,5,0,0,0,0,0,11,8,7,0,6,0,0,0,8,0,9,9,8,9,5,9,6,0,6,0,6,9,0,5,5,6,0,0,0,0,6,5,5,8,0,0,6,0,0,6,0,0,8,11,9,0,8,7,5,0,8,5,9,0,0,8,0,0,0,0,8,0,7,8,0,0,0,0,0,0,10,0,10,7,0,0,0,6,0,0,5,8,0,0,6,5,0,10,8,13,11,0,8,0,7,10,8,0,12,8,6,0,0,7,0,7,0,0,0,0,6,0,0,7,0,5,7,0,0,5,0,0,9,5,0,6,0,6,0,8,8,9,0,0,0,0,6,7,8,0,0,6,0,0,7,7,8,5,11,9,0,7,0,0,5,5,6,6,6,0,6,10,0,0,0,7,0,0,0,7,8,12,0,6,8,12,6,7,0,0,11,5,0,7,0,7,0,0,0,0,0,8,10,0,0,8,11,5,6,6,7,0,0,10,6,11,0,0,0,7,6,0,0,0,9,8,7,0,0,7,0,5,0,7,8,8,0,0,6,0,0,0,6,0,0,0,6,14,9,0,0,14,6,7,0,16,9,5,0,0,9,0,0,6,0,5,6,7,0,0,7,0,6,0,0,0,0,0,7,11,0,5,9,0,7,0,0,7,0,10,5,9,0,6,11,0,7,5,0,0,9,6,6,0,0,6,5,10,0,0,0,0,8]},{"name":"α3","mbons":["MBON14"],"val":1,"group":"pun","eta":0.1,"tau":0,"g":0.2,"conf":"assumption","dans":"PPL106","why":"激活实验不显著;真果蝇里要多次间隔训练才学得会","w0":[6,17,0,12,0,0,22,14,16,8,0,6,13,0,0,14,0,24,0,0,12,0,0,0,14,5,15,11,11,0,0,11,0,6,18,14,7,0,10,0,14,25,0,6,19,0,0,13,0,9,5,8,16,16,12,13,0,0,9,0,0,0,0,0,0,0,0,13,5,6,13,0,0,13,21,14,16,15,0,15,23,17,0,0,9,13,0,0,6,0,13,5,0,8,5,0,17,0,0,0,6,0,0,0,0,17,9,9,0,5,16,17,0,5,14,0,25,14,0,0,7,17,0,16,19,12,7,13,7,21,0,11,6,19,0,0,11,0,0,0,0,0,0,7,0,0,7,0,0,0,5,0,7,0,13,0,14,10,5,0,7,0,0,9,11,14,0,0,0,0,7,7,12,7,0,20,7,8,12,0,8,0,8,25,7,7,6,15,13,11,0,0,0,22,5,5,0,11,6,0,11,0,16,10,14,0,0,0,0,9,0,15,0,0,8,0,0,0,0,0,22,0,0,0,10,12,15,12,9,9,16,0,0,0,6,12,12,13,0,8,0,13,0,0,14,0,9,0,0,14,0,0,0,13,11,8,0,0,5,21,0,13,20,11,6,0,7,0,0,15,12,20,0,0,0,0,0,0,25,19,0,0,7,0,6,0,7,0,6,6,6,0,18,0,0,0,16,0,16,18,12,8,17,5,21,0,15,6,0,14,0,17,18,13,0,0,0,0,8,0,0,12,15,0,0,0,0,11,0,0,5,8,15,0,14,5,13,0,0,13,12,0,0,5,0,17,0,0,12,0,7,11,13,6,0,0,0,5,0,0,13,17,0,11,6,17,0,0,23,14,0,13,0,5,11,19,8,6,12,0,11,0,10,10,11,6,14,0,14,0,0,0,0,7,0,0,0,0,20,8,8,16,0,10,19,6,0,11,14,0,5,21,0,10,8,0,0,13,0,5,0,0,7,0,0,6,21,0,0,7,0,0,5,13,5,0,5,0,0,13,0,0,9,9,6,5,0,0,5,14,6,18,0,12,0,9,0,0,7,13,0,6,0,15,0,7,0,0,16,0,0,7,0,18,0,10,0,0,0,18,10,0,0,12,5,0,14,0,14,0,0,15,15,19,0,0,0,11,16,0,0,0,16,0,0,6,0,12,0,5,12,8,15,20,0,0,12,5,0,0,19,0,6,0,15,11,8,0,0,9,25,10,0,13,20,11,0,15,14,0,0,6,0,17,19,10,0,0,16,0,9,0,0,0,10,0,11,7,0,11,16,0,19,0,0,5,0,10,11,10,0,7,11,0,16,6,0,0,17,6,0,16,0,13,20,25,0,0,0,0,20]},{"name":"γ4","mbons":["MBON05","MBON21","MBON29"],"val":-1,"group":"rew","eta":0.5,"tau":600,"g":0.4,"conf":"confirmed","dans":"PAM08/07","why":"MB298B 激活→回避;甜味奖励 DAN(Burke 2012)","w0":[0,0,0,0,0,11,0,0,0,0,16,0,0,15,18,0,13,0,10,0,0,12,11,0,0,0,0,0,0,17,22,0,10,0,0,0,0,7,0,15,0,0,17,0,0,0,0,0,0,0,0,0,0,0,0,0,17,12,0,18,16,0,12,5,0,19,0,0,0,0,0,0,0,0,0,0,0,0,15,0,0,0,0,14,0,0,13,8,0,11,0,0,0,0,0,0,0,8,0,8,0,19,11,0,12,0,0,0,11,0,0,0,23,0,0,0,0,0,0,12,0,0,12,0,0,0,0,0,0,0,0,0,0,0,12,12,0,10,20,0,0,6,9,0,19,6,0,11,0,0,0,14,0,0,0,25,0,0,0,11,0,14,10,0,0,0,9,0,0,0,0,0,0,0,14,0,0,0,0,10,0,10,0,0,0,0,0,0,0,0,0,8,17,0,0,0,12,0,0,0,0,0,0,0,0,15,0,15,0,0,5,0,12,11,0,0,12,12,11,0,0,13,14,19,0,0,0,0,0,0,0,13,15,0,0,0,0,0,9,0,7,0,0,19,0,0,0,0,0,0,18,0,0,0,0,0,18,6,0,0,0,0,0,0,0,0,0,15,6,0,0,0,11,0,16,0,13,22,0,0,19,9,0,0,0,14,0,9,0,0,0,13,0,8,15,13,0,14,0,0,0,0,0,0,0,13,0,0,0,0,8,0,0,0,9,9,9,0,0,0,0,0,0,6,0,7,10,0,12,10,0,0,0,8,0,0,0,11,0,0,0,0,0,0,18,0,0,7,0,10,0,0,0,0,11,10,16,0,0,10,0,0,16,0,0,0,10,13,0,0,11,0,0,0,0,0,0,0,0,12,0,12,0,0,0,0,0,0,0,0,0,0,0,0,16,12,9,10,0,0,0,0,19,0,0,0,5,0,0,12,0,0,0,0,0,0,13,0,0,0,0,11,0,11,0,0,0,0,10,0,15,11,0,0,0,0,0,0,12,0,19,0,0,0,0,0,0,6,0,0,0,0,18,0,9,0,14,0,0,0,8,0,0,0,0,0,0,14,0,0,19,0,0,0,6,0,8,10,17,0,0,9,0,0,0,0,0,0,0,14,0,0,0,0,5,0,0,0,0,16,0,9,0,0,0,0,8,0,10,0,0,0,0,0,9,11,0,0,10,12,0,7,0,9,0,0,0,0,6,0,0,0,19,0,0,0,16,0,0,17,0,0,10,0,0,0,13,12,0,7,0,10,20,10,0,5,0,0,7,0,0,8,0,12,10,0,15,0,0,0,7,0,0,7,0,0,6,11,0,0,0,0,12,0,0,0,16,0,9,18,0]},{"name":"γ5","mbons":["MBON01"],"val":-1,"group":"rew","eta":0.5,"tau":600,"g":0.4,"conf":"confirmed","dans":"PAM01","why":"MB011B 激活→回避;PAM-γ5 给奖励记忆","w0":[0,0,0,0,0,7,0,0,0,0,5,0,0,0,0,0,0,0,0,6,0,6,0,0,0,0,0,0,0,7,8,0,5,0,0,0,0,6,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,7,11,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,0,0,0,0,11,0,0,9,6,0,6,0,0,0,0,0,0,0,0,0,6,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,8,0,0,0,0,0,0,0,0,0,0,0,6,0,0,8,7,0,0,10,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,8,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,8,0,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,11,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,5,0,0,0,0,0,0,0,0,0,9,10,0,0,0,7,0,6,0,7,11,0,0,0,0,0,0,0,11,0,0,0,0,0,13,0,9,0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,5,0,5,7,0,11,10,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,16,6,8,0,0,5,0,0,9,0,0,0,10,0,0,0,6,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,8,0,0,0,0,5,0,0,0,0,0,0,6,0,8,7,0,0,0,0,0,0,7,0,9,0,0,0,0,0,0,0,0,0,0,0,5,0,11,0,5,0,0,0,0,0,0,0,0,0,0,5,0,0,6,0,0,0,0,0,9,7,0,0,0,8,0,0,0,0,0,0,0,5,0,0,0,0,7,0,0,0,0,6,0,0,0,0,0,0,5,0,9,0,0,0,0,0,0,0,0,0,0,8,0,6,0,0,0,0,0,0,0,0,0,0,9,0,0,0,0,0,0,8,0,0,0,0,0,0,7,7,0,5,0,7,0,5,0,0,0,0,7,0,0,10,0,8,0,0,0,0,0,0,5,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"name":"β'2","mbons":["MBON03","MBON04"],"val":-1,"group":"rew","eta":0.5,"tau":600,"g":0.4,"conf":"confirmed","dans":"PAM06/05/02","why":"MB011B 激活→回避(本模型里 α'β' KC 几乎不亮,作用很小)","w0":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,16,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"name":"α1","mbons":["MBON07"],"val":-1,"group":"rew","eta":0.2,"tau":0,"g":0.2,"conf":"assumption","dans":"PAM11","why":"方向是从递质+奖励 DAN 推的;PAM-α1 负责糖的长时记忆(Ichinose 2015)","w0":[16,14,12,21,0,0,7,18,5,11,0,16,17,0,0,13,0,17,0,0,19,0,0,13,7,0,15,7,19,0,0,0,0,17,15,6,15,0,14,0,18,13,0,17,5,7,0,5,6,8,11,22,10,20,6,18,0,0,12,0,0,7,0,0,0,0,9,14,11,6,14,7,0,15,20,15,6,15,0,24,19,16,0,0,12,12,0,0,6,0,13,0,13,15,16,11,19,0,15,0,0,0,0,18,0,20,13,10,0,19,17,20,0,6,5,8,12,6,6,0,14,19,0,14,16,15,15,12,6,10,7,11,17,15,0,0,11,0,0,12,0,0,0,6,0,0,17,0,6,5,5,0,0,0,0,0,15,11,5,0,6,0,0,21,11,13,0,10,0,18,20,6,14,12,0,14,16,18,11,0,20,0,17,8,20,21,18,7,13,13,0,0,0,18,6,12,0,20,13,6,6,0,21,8,15,0,5,0,9,0,0,5,0,0,17,12,0,0,0,12,16,0,0,0,24,5,20,15,16,15,17,0,0,0,17,20,21,11,0,14,0,14,11,0,7,0,9,0,14,12,0,10,10,16,11,13,0,0,7,6,0,16,12,16,0,10,15,0,0,10,13,25,0,7,0,11,0,0,23,13,0,0,7,0,8,0,5,0,14,0,9,0,23,0,0,0,9,0,8,14,13,8,18,6,0,0,23,15,11,0,0,16,16,5,0,0,0,10,14,10,11,16,12,0,6,0,0,14,0,0,9,21,14,0,13,16,13,0,14,8,14,0,12,18,0,11,9,0,5,0,11,11,15,0,0,0,0,14,10,0,12,14,0,13,12,9,0,0,11,0,0,16,0,13,5,19,12,6,21,0,5,0,5,14,15,0,11,13,0,6,9,6,0,15,0,0,0,0,13,6,0,20,0,14,19,10,0,12,13,0,7,8,6,16,7,0,0,5,8,13,0,0,19,0,18,16,15,7,0,16,0,0,16,11,7,19,0,10,0,15,0,6,12,11,13,16,5,0,13,11,5,0,0,7,0,8,0,6,16,15,0,9,15,13,11,6,12,0,16,14,0,16,7,13,0,22,0,0,0,14,5,0,5,0,15,17,9,5,14,0,5,6,23,16,0,9,13,21,13,0,5,0,13,12,5,13,0,21,0,10,15,23,15,21,0,0,12,9,0,0,0,0,10,0,24,0,13,13,0,17,18,14,0,14,15,14,0,16,8,0,0,17,0,5,9,17,0,0,8,0,15,0,0,0,17,0,12,11,0,19,14,0,11,0,0,6,0,12,14,14,0,13,11,0,0,19,0,0,7,12,6,20,0,13,11,7,0,0,0,0,14]},{"name":"β1","mbons":["MBON06"],"val":-1,"group":"rew","eta":0.3,"tau":1800,"g":0.2,"conf":"assumption","dans":"PAM10","why":"MBON 方向无证据;PAM-β1 给弱的奖励记忆","w0":[0,13,8,6,0,0,7,9,0,5,0,11,5,0,0,8,0,0,0,0,0,0,0,11,0,0,0,0,7,0,0,0,0,0,6,0,11,0,5,0,0,5,0,15,7,0,0,5,5,0,0,5,0,11,0,0,0,0,0,0,0,0,0,0,0,0,9,22,8,5,9,8,11,0,8,6,13,0,0,5,6,0,6,0,0,0,0,0,8,0,0,9,6,7,15,9,9,0,7,0,9,0,0,7,0,8,11,0,0,0,5,8,0,12,0,6,6,8,0,0,0,5,0,7,0,8,0,8,13,6,0,9,0,5,0,0,10,0,0,0,0,0,0,7,0,0,5,0,10,5,0,0,0,0,6,0,12,6,0,0,0,0,0,6,14,0,0,11,6,11,12,9,11,0,0,12,0,16,6,0,11,0,14,13,0,0,13,0,5,5,11,0,0,10,7,12,0,18,0,8,0,0,6,5,6,0,0,0,0,11,0,0,0,0,7,6,0,0,0,13,7,0,0,0,10,13,9,0,10,0,6,0,0,6,0,7,5,0,0,12,0,6,12,0,0,10,0,0,0,0,0,0,0,0,0,15,0,0,7,5,0,6,11,0,11,7,11,0,0,0,0,7,0,0,0,0,0,0,0,13,0,0,0,9,9,0,5,0,14,9,0,0,11,0,0,0,12,0,0,9,10,5,7,10,0,0,0,6,0,7,0,16,0,7,0,0,0,0,0,0,0,9,9,0,12,0,0,0,0,0,9,0,6,0,5,6,12,0,5,7,0,0,10,0,0,11,0,0,13,0,0,9,9,0,0,0,0,12,13,0,0,5,0,0,5,15,0,0,11,14,0,0,0,6,6,0,14,11,0,0,8,0,10,0,0,10,0,10,0,6,5,10,6,11,0,0,0,0,6,10,8,0,0,7,14,0,0,0,8,0,7,11,0,6,12,0,0,0,0,10,0,0,5,0,0,15,8,0,0,0,0,0,9,6,8,13,6,0,0,0,0,0,0,0,5,7,0,0,0,0,0,11,0,0,0,0,0,11,11,0,0,5,6,11,8,0,16,0,0,12,0,0,0,7,0,14,0,0,0,0,0,0,0,0,6,11,10,6,0,0,0,12,9,0,0,5,0,5,16,0,10,0,10,0,0,7,0,0,0,8,12,6,7,5,0,0,0,9,0,0,0,0,9,0,8,10,0,0,0,0,7,8,0,0,17,0,0,6,6,0,0,7,0,10,16,0,0,0,12,0,6,0,0,0,10,0,6,7,0,11,14,0,0,0,0,7,0,0,8,6,0,0,0,0,9,7,0,0,5,13,6,5,0,12,5,11,0,0,0,0,17]}],"cpn":{"glomeruli":["DM6","VL2a","DL1","VA3","VM5d","DM2","VA5","DL5"],"r":[0,15,30,60,100,150],"pn":{"0":{"DM6":0.0,"VL2a":0.0,"DL1":0.0,"VA3":0.0,"VM5d":0.0,"DM2":0.0,"VA5":0.0,"DL5":0.0},"15":{"DM6":12.8,"VL2a":10.4,"DL1":12.8,"VA3":0.8,"VM5d":0.0,"DM2":0.0,"VA5":0.0,"DL5":0.0},"30":{"DM6":49.2,"VL2a":18.7,"DL1":37.8,"VA3":6.2,"VM5d":0.1,"DM2":6.5,"VA5":0.0,"DL5":7.0},"60":{"DM6":106.3,"VL2a":34.3,"DL1":72.8,"VA3":16.8,"VM5d":8.3,"DM2":11.5,"VA5":0.0,"DL5":15.5},"100":{"DM6":165.2,"VL2a":67.6,"DL1":128.8,"VA3":39.5,"VM5d":30.3,"DM2":33.0,"VA5":0.0,"DL5":23.0},"150":{"DM6":214.8,"VL2a":102.4,"DL1":183.2,"VA3":71.8,"VM5d":60.8,"DM2":68.2,"VA5":1.2,"DL5":41.5}}}};
+/* ─────────── 指南针环(与上一个页面同一份模型) ─────────── */
+const M = D.M, TY = D.types, NB = D.sym["EPG>EPG"].length, N = TY.length * M;
+const P = {G:10, gi:16, gp:0.3, b:0.05, pb:-1, turnAmp:1.0, sunAmp:0.3, dt:0.002, tau:0.02};
+const TURN = 184 * Math.PI / 180;           // 实测峰转速 rad/s
+const th = Float64Array.from({length:M}, (_, i) => i * 2 * Math.PI / M);
+const ctr = Array.from({length:NB}, (_, i) => -Math.PI + (i + .5) * 2 * Math.PI / NB);
+const wrap = a => Math.atan2(Math.sin(a), Math.cos(a)), deg = a => Math.round(a * 180 / Math.PI);
+const off = t => TY.indexOf(t) * M;
+function interp(h, d){ const w = 2*Math.PI/NB; let u = (d - ctr[0]) / w; u = ((u % NB) + NB) % NB;
+  const i = Math.floor(u), f = u - i; return h[i]*(1-f) + h[(i+1)%NB]*f; }
+const Wc = (() => {
+  const W = Array.from({length:N}, () => new Float64Array(N));
+  TY.forEach((a, ai) => { const g = (D.sign[a] > 0 ? 1 : P.gi) * D.sign[a] * D.count[a] / M;
+    TY.forEach((b, bi) => { const h = D.sym[a+">"+b];
+      for (let i = 0; i < M; i++) for (let j = 0; j < M; j++) W[bi*M+j][ai*M+i] = g * interp(h, wrap(th[j]-th[i])); }); });
+  let tot = 0; for (const r of W){ let s = 0; for (const v of r) s += Math.abs(v); tot += s; } tot /= N;
+  for (const r of W){ for (let k = 0; k < N; k++) r[k] *= P.G / tot;
+    for (const t of ["PENl","PENr"]) for (let k = off(t); k < off(t)+M; k++) r[k] *= P.gp; }
+  return W; })();
+// 稀疏存储:只留非零项。剖面在远角度处是精确的 0,所以这一步不改变任何结果
+const CI = [], CV = [];
+for (const row of Wc){ const ix = [], vv = []; row.forEach((v, i) => { if (v !== 0){ ix.push(i); vv.push(v); } });
+  CI.push(Int32Array.from(ix)); CV.push(Float64Array.from(vv)); }
+const SPARSE = CI.reduce((a, r) => a + r.length, 0) / (N * N);
+const base = new Float64Array(N).fill(P.b);
+for (const t of ["PENl","PENr"]) for (let k = off(t); k < off(t)+M; k++) base[k] += P.pb;
+let X = new Float64Array(N);
+function ringStep(ego, cueAmp, turn){
+  const r = X.map(v => Math.min(1, Math.max(0, v))), I = base.slice();
+  if (cueAmp > 0) for (let i = 0; i < M; i++) I[i] += cueAmp * Math.exp(4*(Math.cos(th[i]-ego)-1));
+  if (turn){ const o = off(turn > 0 ? "PENl" : "PENr"); for (let k = o; k < o+M; k++) I[k] += P.turnAmp; }
+  const k = P.dt / P.tau, nx = new Float64Array(N);
+  for (let j = 0; j < N; j++){ let s = 0; const ci = CI[j], cv = CV[j]; for (let q = 0; q < ci.length; q++) s += cv[q]*r[ci[q]]; nx[j] = X[j] + k*(-X[j] + s + I[j]); }
+  X = nx;
+}
+function bump(){ let zx = 0, zy = 0, s = 0;
+  for (let i = 0; i < M; i++){ const e = Math.min(1, Math.max(0, X[i])); zx += e*Math.cos(th[i]); zy += e*Math.sin(th[i]); s += e; }
+  return {a: Math.atan2(zy, zx), s: Math.hypot(zx, zy) / (s + 1e-9)}; }
+
+/* ─────────── 转向电路:FC2(目标)→ PFL3(比较)→ DNa02(转身) ─────────── */
+const SW = {};                                   // SW[side][E|D|F] = 36×36 [post][pre]
+for (const side of ["L","R"]){ const p = "PFL3_" + side; SW[side] = {};
+  for (const [k, pre, g] of [["E","EPG",1],["D","Delta7",-ST.gd],["F","FC2",ST.gf]]){
+    const h = ST.profile[pre + ">" + p], m = Array.from({length:M}, () => new Float64Array(M)), c = g * ST.count[pre] / M;
+    for (let i = 0; i < M; i++) for (let j = 0; j < M; j++) m[j][i] = c * interp(h, wrap(th[j] - th[i]));
+    SW[side][k] = m; } }
+function steer(goalEPG, noise){
+  const epg = new Float64Array(M), d7 = new Float64Array(M), f = new Float64Array(M), o7 = off("Delta7");
+  for (let i = 0; i < M; i++){ epg[i] = Math.min(1, Math.max(0, X[i])); d7[i] = Math.min(1, Math.max(0, X[o7+i]));
+    f[i] = Math.exp(4*(Math.cos(th[i] - goalEPG) - 1)); }
+  const sum = {};
+  for (const side of ["L","R"]){ let tot = 0; const w = SW[side];
+    for (let j = 0; j < M; j++){ let v = ST.bias;
+      for (let i = 0; i < M; i++) v += w.E[j][i]*epg[i] + w.D[j][i]*d7[i] + w.F[j][i]*f[i];
+      tot += Math.max(0, v); }
+    sum[side] = tot; }
+  // 接线图:PFL3 左 → DNa02 右,PFL3 右 → DNa02 左(交叉)。DNa02 驱动同侧转身(Rayshubskiy 2020)
+  const dnL = sum.R, dnR = sum.L, diff = dnL - dnR + noise;
+  return { dnL, dnR, turn: diff > 4 ? 1 : diff < -4 ? -1 : 0 };
+}
+
+/* ─────────── 味觉查表(全脑 LIF 离线结果,双线性插值) ─────────── */
+function taste(s, b){
+  const L = TT.levels, R = TT.rate, idx = v => { v = Math.min(L[L.length-1], Math.max(0, v));
+    let i = 0; while (i < L.length-2 && v > L[i+1]) i++; return [i, (v - L[i]) / (L[i+1] - L[i])]; };
+  const [i, fi] = idx(s), [j, fj] = idx(b);
+  return R[i][j]*(1-fi)*(1-fj) + R[i+1][j]*fi*(1-fj) + R[i][j+1]*(1-fi)*fj + R[i+1][j+1]*fi*fj;
+}
+
+/* ─────────── 嗅觉:羽流(plume.js)→ 触角 ORN → 触角叶 PN(ln_fix 全脑模拟离线查表) ─────────── */
+const ORN = { A: { max: 150, K: 0.5 }, B: { max: 300, K: 0.5 } };   // ⚙ 浓度 → ORN 放电的饱和曲线(参数是设的)
+const hill = (c, o) => { c = Math.max(0, c); return o.max * c / (c + o.K); };
+// 查表预先摊成数字数组 PNT[ia][ib] = [各嗅小球 PN…, KC 比例] —— 每 2 ms 查一次,别在里面拼字符串/建对象(手机上会卡)
+const PNT = OT.rA.map(a => OT.rB.map(b => { const k = `${a},${b}`; return OT.glomeruli.map(g => OT.pn[k][g]).concat(OT.kc_frac[k]); }));
+const NGL = OT.glomeruli.length, PNV = new Float64Array(NGL + 1);
+function lidx(L, v){ v = Math.min(L[L.length-1], Math.max(0, v)); let i = 0; while (i < L.length-2 && v > L[i+1]) i++; return i + (v - L[i]) / (L[i+1] - L[i]); }
+function pnAt(rA, rB, out = PNV){       // 双线性插值:醋味 ORN 频率 × 霉味 ORN 频率 → 各嗅小球 PN 平均放电 + KC 比例
+  const u = lidx(OT.rA, rA), v = lidx(OT.rB, rB), i = Math.min(OT.rA.length - 2, u | 0), j = Math.min(OT.rB.length - 2, v | 0), fi = u - i, fj = v - j;
+  const a = PNT[i][j], b = PNT[i+1][j], c = PNT[i][j+1], d = PNT[i+1][j+1];
+  for (let g = 0; g <= NGL; g++) out[g] = a[g]*(1-fi)*(1-fj) + b[g]*fi*(1-fj) + c[g]*(1-fi)*fj + d[g]*fi*fj;
+  return out;
+}
+const GI = Object.fromEntries(OT.glomeruli.map((g, i) => [g, i]));     // 名字 → 下标
+const SMELL_A = 30, SMELL_B = 100;      // Hz:DM1+VA2 的 PN 平均 / DA2 的 PN 超过这个算“闻到”(⚙ 阈值是设的;PN 反应是模拟出来的)
+// ⚙ 霉味门槛 30→60→100、苦斑气味减半。实测:门槛 60 时 39 次逆风追味里有 18 次半路被霉味吓跑,只有 14 次吃到;
+//   100 ≈ 只有离苦斑下风 2~4 格内才算“闻到霉”。文献里霉味会压过醋味(Stensmyr 2012),但那里两者来自同一个烂果子
+const TROP_GAIN = 40;                   // ⚙ 左右触角差 → 转向偏置的力度;“往浓的那侧转”这个方向来自路径权重(同侧 4.2×,左右已取平均)
+// ⚙ 12→40:远处两触角只差 ~4%(偏置 ~1,低于转身门槛 4,不起作用);源头附近可差 ~20%(偏置 ~5)才会把它拉向浓的一侧。第一版在糖斑边上半格擦肩而过
+let showOdor = true, showTaste = true;
+// 苯乙醛(气味 C,坏果子)→ 触角叶 PN:一维查表(全脑模型离线算的)。“闻到”= DM6 与 DL1 的 PN 平均 > 30 Hz
+function cpnAt(r){ const L = MB.cpn.r, i0 = Math.min(L.length - 2, Math.max(0, L.findIndex((v, j) => j < L.length - 1 && r < L[j+1]))), f = Math.max(0, Math.min(1, (r - L[i0]) / (L[i0+1] - L[i0])));
+  const a = MB.cpn.pn[String(L[i0])], b = MB.cpn.pn[String(L[i0+1])], o = {};
+  for (const g of MB.cpn.glomeruli) o[g] = a[g] * (1 - f) + b[g] * f; return o; }
+
+/* ─────────── 学习:蘑菇体(KC → MBON,多巴胺门控的突触压低) ───────────
+   🧠 数据:每种气味在各浓度档下亮哪些 Kenyon 细胞、每个 KC 到各隔室 MBON 的突触数 —— 来自 FlyWire + 全脑模型
+      (ALPN→KC 突触 ×2 校准,使醋味激活 ~6% KC,落在真果蝇 5~10% 的范围;不校准的话苯乙醛只亮 1~3 个 KC,学不了)。
+   ⚙ 规则:味觉事件 → DAN → 最近 6 秒内亮过的 KC 到该隔室 MBON 的突触按比例压低,之后慢慢恢复(Hige 2015;Aso & Rubin 2016)。
+      读出 U = 天生吸引(+1) + 2 × L,L = 各隔室“突触剩多少”的带符号加权和,初始恰为 0。 */
+const MBN = MB.kc_class.length, LV = MB.odors.vinegar.levels;
+const KCSET = { A: MB.odors.vinegar.active.map(a => Int32Array.from(a)), C: MB.odors.C.active.map(a => Int32Array.from(a)) };
+const MBW0 = MB.comps.map(c => Float64Array.from(c.w0));
+let MBS = MB.comps.map(() => new Float64Array(MBN).fill(1));      // s = w / w0(1 = 没学过)
+const lastKC = new Float64Array(MBN).fill(-1e9);
+let mbT = 0, mbAcc = 0, mbLearn = true, mbStats = { pun: 0, rew: 0 }, mbHist = [], mbHistT = 0;
+// 取最接近的一档(第 0 档要真到 30 Hz):取“不超过的最高一档”的话,96 Hz 会落到 60 那档,苯乙醛只亮 4 个 KC 而不是 39 个
+function lvIdx(r){ let i = r >= LV[0] ? 0 : -1; for (let j = 1; j < LV.length; j++) if (r >= (LV[j-1] + LV[j]) / 2) i = j; return i; }
+function mbMark(o, r){ const i = lvIdx(r); if (i < 0) return 0; const set = KCSET[o][i]; for (let q = 0; q < set.length; q++) lastKC[set[q]] = mbT; return set.length; }
+// 读出固定用 100 Hz 那一档的 KC(= 这种气味的“身份”):
+//   · 低浓度时模型里几乎没有 KC 亮,若按实时浓度读,远处闻到时 L 恒为 0,学到的厌恶用不上;
+//   · 高浓度(≥125 Hz)那一档有 96 个 KC,其中只有 39 个是 100 Hz 那档的 —— 按实时浓度读的话,学会讨厌的气味
+//     在源头附近会被读成“还挺喜欢”(对抗审查实测:U 从 −0.67 跳到 +0.36),于是冲进去。
+function mbL(o, r){
+  // 趋近侧、回避侧各按本侧权重平均(⇒ L ∈ [−1, 1]):若按全部隔室一起平均,苯乙醛的趋近侧只占 ~37% 权重,
+  // 趋近突触全压到 0 也只能让 U 降到 +0.25,永远学不会“躲”
+  const set = KCSET[o][2], num = { 1: 0, "-1": 0 }, den = { 1: 0, "-1": 0 };
+  for (let ci = 0; ci < MB.comps.length; ci++){ const c = MB.comps[ci], w = MBW0[ci], sv = MBS[ci]; let d = 0, d0 = 0;
+    for (let q = 0; q < set.length; q++){ const k = set[q]; d0 += w[k]; d += w[k] * sv[k]; }
+    if (d0 <= 0) continue; const om = c.g * Math.min(1, d0 / 100);
+    num[c.val] += om * (d / d0 - 1); den[c.val] += om; }
+  // 趋近隔室被压低 ⇒ L 变负;回避隔室被压低 ⇒ L 变正
+  return (den[1] > 0 ? num[1] / den[1] : 0) - (den[-1] > 0 ? num[-1] / den[-1] : 0);
+}
+function mbCompFrac(o){ const set = KCSET[o][2]; return MB.comps.map((c, ci) => { let d = 0, d0 = 0; const w = MBW0[ci], sv = MBS[ci];
+  for (let q = 0; q < set.length; q++){ const k = set[q]; d0 += w[k]; d += w[k] * sv[k]; } return d0 > 0 ? d / d0 : null; }); }
+function mbEvent(group, A, why){        // 味觉事件 → 对应的 DAN 群
+  if (!mbLearn || A <= 0) return;
+  let n = 0;
+  for (let ci = 0; ci < MB.comps.length; ci++){ const c = MB.comps[ci]; if (c.group !== group) continue; const sv = MBS[ci];
+    for (let k = 0; k < MBN; k++){ const dtk = mbT - lastKC[k]; if (dtk > 6) continue; sv[k] *= 1 - c.eta * A * Math.exp(-dtk / 2); n++; } }
+  mbStats[group]++; fly.UA = 1 + 2 * mbL("A", fly.rA); fly.UC = 1 + 2 * mbL("C", fly.rC);   // 立刻生效,别等下一次 0.1 s 刷新
+  if (n) log(group === "pun" ? `<b>惩罚</b>（${why}）：PPL1 多巴胺神经元 → 压低刚才亮过的 KC 到“趋近”MBON 的突触` : `<b>奖励</b>（${why}）：PAM 多巴胺神经元 → 压低刚才亮过的 KC 到“回避”MBON 的突触`);
+}
+function mbTick(dt){                     // 每 0.1 s:突触恢复 + 缓存 U
+  for (let ci = 0; ci < MB.comps.length; ci++){ const c = MB.comps[ci]; if (!c.tau) continue; const f = Math.exp(-dt / c.tau), sv = MBS[ci];
+    for (let k = 0; k < MBN; k++) if (sv[k] < 1) sv[k] = 1 - (1 - sv[k]) * f; }
+  fly.UA = 1 + 2 * mbL("A", fly.rA); fly.UC = 1 + 2 * mbL("C", fly.rC);
+}
+function mbReset(){ MBS.forEach(v => v.fill(1)); lastKC.fill(-1e9); mbStats = { pun: 0, rew: 0 }; mbHist = []; if (fly){ fly.UA = fly.UC = 1; } }
+
+
+/* ─────────── 地图生成(种子 → 洞穴 + 糖苦斑块) ─────────── */
+const G = 64;                                   // 格子数;一格 = 2 mm
+let N_SUGAR = 8, N_BAD = 4, N_BITTER = 6;
+let NOSE_OFF = false;
+const NEAR_FIELD = 1 / 100;                       // ⚙ 源强 → 贴近源头时的浓度(见 flyStep 的“近场”)       // ⚙ 好糖斑 / 坏果子 / 霉斑 个数:太密的话乱走也能撞上吃的,嗅觉就没用武之地
+function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0;
+  let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let world;
+function genWorld(seed){
+  const R = rng(seed), wall = new Uint8Array(G*G), sug = new Float32Array(G*G), bit = new Float32Array(G*G);
+  // 味道(尝)与气味(闻)分开存:坏果子里也有糖,但它不该散发醋味
+  const odA = new Float32Array(G*G), odB = new Float32Array(G*G), odC = new Float32Array(G*G);
+  const noise = cell => { const n = Math.ceil(G/cell)+2, g = Array.from({length:n*n}, R);
+    return (x, y) => { const fx = x/cell, fy = y/cell, i = Math.floor(fx), j = Math.floor(fy), u = fx-i, v = fy-j,
+      s = t => t*t*(3-2*t), a = g[j*n+i], b = g[j*n+i+1], c = g[(j+1)*n+i], d = g[(j+1)*n+i+1];
+      return a + (b-a)*s(u) + (c-a)*s(v) + (a-b-c+d)*s(u)*s(v); }; };
+  // 把走不到的空地填成墙,保证整张图连通。⚠ 中间出生的那个圆若被墙围死,填完整张图只剩 ~49 格、一块糖都放不下
+  // (1000 个种子里 41 个是这样)⇒ 能走的地方不到 600 格就重新生成。正常地图第一次就过,随机数消耗不变 ⇒ 地图一格不变
+  for (let attempt = 0; ; attempt++){
+    const n1 = noise(11), n2 = noise(4);
+    for (let y = 0; y < G; y++) for (let x = 0; x < G; x++){
+      const v = .7*n1(x, y) + .3*n2(x, y), edge = x < 1 || y < 1 || x > G-2 || y > G-2;
+      const dc = Math.hypot(x - G/2, y - G/2);
+      wall[y*G+x] = edge || (v > .6 && dc > 4) ? 1 : 0; }
+    const seen = new Uint8Array(G*G), q = [(G/2|0)*G + (G/2|0)]; seen[q[0]] = 1; let n = 0;
+    while (q.length){ const c = q.pop(), x = c % G, y = c / G | 0; n++;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const k = (y+dy)*G + x+dx;
+        if (!seen[k] && !wall[k]){ seen[k] = 1; q.push(k); } } }
+    if (n < 600 && attempt < 20) continue;
+    for (let k = 0; k < G*G; k++) if (!seen[k]) wall[k] = 1;
+    break;
+  }
+  const cen = [];                                           // 已放下的好糖中心
+  // 找放置点:不在墙里、离出生点 ≥ 7 格;给了 far 的话还要离那些中心 ≥ minD 格。
+  //   都满足就用第一个;400 次都不满足就用“离 far 最远”的那个(以前是直接用最后一个 —— 对抗审查查到种子 91
+  //   的坏果子离好糖中心只有 1.2 格)。一个合格的点都没有就不放这一块。
+  const blob = (n, lo, hi, put, far = null, minD = 0) => { for (let t = 0; t < n; t++){
+    let best = null;
+    for (let tries = 0; tries < 400; tries++){
+      const x = 2 + R()*(G-4), y = 2 + R()*(G-4);
+      if (wall[(y|0)*G+(x|0)] || Math.hypot(x-G/2, y-G/2) < 7) continue;
+      const dmin = far && far.length ? Math.min(...far.map(c => Math.hypot(x - c[0], y - c[1]))) : Infinity;
+      if (!best || dmin > best[2]) best = [x, y, dmin];
+      if (dmin >= minD) break;
+    }
+    if (!best) continue;
+    const [cx, cy] = best;
+    if (put.center) cen.push([cx, cy]);
+    const rad = 1.6 + R()*2.6, peak = lo + R()*(hi-lo);
+    for (let y = Math.floor(cy-rad); y <= cy+rad; y++) for (let x = Math.floor(cx-rad); x <= cx+rad; x++){
+      if (x < 0 || y < 0 || x >= G || y >= G || wall[y*G+x]) continue;
+      const d = Math.hypot(x+.5-cx, y+.5-cy) / rad; if (d < 1) put(y*G+x, 1 - .5*d*d, peak); } } };
+  const mx = (a, k, v) => { if (v > a[k]) a[k] = v; };
+  const good = (k, f, pk) => { mx(sug, k, pk*f); mx(odA, k, pk*f); }; good.center = true;
+  blob(N_SUGAR, 110, 200, good);                                                                            // 好糖:甜,散发醋味
+  // 坏果子:甜里掺苦。糖封顶 160、苦到 200 —— 味觉表里 150/200 ⇒ 进食神经元 0 Hz(会被拒绝);200/200 反而 202 Hz 会吃
+  // ⚙ 离好糖中心 ≥ 12 格(中心到中心;斑块半径最大 4.2 ⇒ 边缘至少隔 ~3.6 格):挨着的话,尝到坏果子那一刻醋味也很浓
+  //   ⇒ 蘑菇体把醋味一起记成“坏”,连好糖都不追了(实测 U 从 1.0 掉到 0.05)。10 格时仍查到醋味 U 一度掉到 0.03
+  blob(N_BAD, 110, 160, (k, f, pk) => { mx(sug, k, pk*f); mx(bit, k, 200*f); mx(odC, k, pk*f); }, cen, 12);
+  // 霉斑随便放(可以压在糖上 = 发霉的糖)。试过让它也离糖 ≥ 9 格:霉味羽流散到通道上,远处找食物开嗅觉反而比关嗅觉慢
+  //   (39 vs 35 秒);而随便放时醋味也被霉斑罚,但吃糖的奖励盖得住 —— 16 张图 × 30 分钟,醋味 U 最低 0.65,从没掉到 0.3 以下
+  blob(N_BITTER, 60, 200, (k, f, pk) => { mx(bit, k, pk*f); mx(odB, k, pk*f); });                       // 霉斑:苦,散发霉味
+  return { wall, sug, bit, odA, odB, odC, sug0: sug.slice(), seed };
+}
+const tileAt = (x, y) => { const i = Math.floor(x), j = Math.floor(y); return (i < 0 || j < 0 || i >= G || j >= G) ? -1 : j*G + i; };
+const isWall = (x, y) => { const k = tileAt(x, y); return k < 0 || world.wall[k] === 1; };
+
+/* ─────────── 果蝇 ─────────── */
+const SPEED = 5;                                // 格/秒 ≈ 10 mm/s
+let fly, trail, logs, sunOn = true, sunAz = 60*Math.PI/180, paused = false;
+let SUN_REF = sunAz;   // 果蝇心里“太阳在哪”是出生那一刻定的;之后挪太阳,它的估计会跟着偏 —— 那就是太阳罗盘
+function newFly(){
+  fly = { x: G/2+.5, y: G/2+.5, h: 0, px: G/2+.5, py: G/2+.5,  // 真实位置 / 它以为的位置(路径积分)
+          goal: 0, turn: 0, state: "explore", runT: 4, hunger: .6, food: null,
+          srch: null, dnL: 0, dnR: 0, rate: 0, s: 0, b: 0, fed: 0, rejected: 0, fullT: 0,
+          st: 0, rejT: 0, wd: 0, hist: [], path: 0, unstuck: 0,
+          cA: 0, cB: 0, rAL: 0, rAR: 0, rB: 0, pn: new Float64Array(NGL + 1), smellA: false, smellB: false, trop: 0,
+          odor: null, surgeCool: 0, avoidCool: 0, egoUp: 0,
+          cC: 0, rA: 0, rC: 0, rCL: 0, rCR: 0, smellC: false, pnC: cpnAt(0), UA: 1, UC: 1, Umix: 0, kcA: 0, kcC: 0 };
+  trail = []; X = new Float64Array(N); SUN_REF = sunAz; mbT = 0; mbHist = []; mbHistT = 0;
+  for (let i = 0; i < 150; i++) ringStep(wrap(sunAz - fly.h), 1, 0);
+  logs = []; log(`地图 #${world.seed} 生成。果蝇在中间醒来。`);
+}
+function log(s){ logs.unshift(s); logs = logs.slice(0, 30); document.getElementById("log").innerHTML = logs.map(x => `<div>${x}</div>`).join(""); }
+const STATES = {
+  explore: ["探索", "沿着相对太阳的一个固定角度走直线", false],
+  feed:    ["进食", "口器伸出，进食运动神经元放电", true],
+  search:  ["局部搜索", "离开食物后来回折返，靠路径积分找回去", false],
+  reject:  ["拒绝", "尝到苦，不吃，掉头走开（苦味压过了糖味，或者同时闻到了霉味）", true],
+  wall:    ["撞墙", "转向空旷方向", false],
+  surge:   ["逆风追味", "闻到醋味：朝上风走，沿着气味往源头追", false],
+  cast:    ["横扫找味", "气味断了：垂直于风向左右扫，想把气味找回来", false],
+  avoid:   ["避开气味", "闻到霉味（天生讨厌）就往下风走开；闻到学会讨厌的果香就斜着横穿出它的羽流。离源头很近时直接背对气味变浓的方向走", false],
+};
+function setState(s){ if (fly.state === s) return; fly.state = s; fly.st = 0; let [n, why, brain] = STATES[s];
+  if (s === "surge" && fly.smellC && fly.rC > fly.rA) why = "闻到苯乙醛（坏果子的果香）：朝上风走——它还没学会讨厌这个味";
+  document.getElementById("state").textContent = n; document.getElementById("stWhy").textContent = why;
+  const tag = document.getElementById("stTag"); tag.textContent = brain ? "🧠 味觉查表" : "⚙ 规则"; tag.className = "tag " + (brain ? "brain" : "rule"); }
+
+function flyStep(dt, R){
+  const b = bump(), est = wrap(SUN_REF - b.a);          // 它唯一能“看到”的朝向
+  const k = tileAt(fly.x, fly.y);
+  fly.s = world.sug[k] || 0; fly.b = world.bit[k] || 0; fly.rate = taste(fly.s, fly.b);
+  fly.hunger = Math.min(1, fly.hunger + dt * 0.012);
+  // 每个计时器各数各的 —— 以前共用一个 fly.t,撞墙会把它清零,搜索的 35 秒超时就永远到不了
+  fly.st += dt;                                          // 当前状态持续了多久(setState 清零)
+  fly.fullT = Math.max(0, fly.fullT - dt); fly.rejT = Math.max(0, fly.rejT - dt); fly.runT -= dt;
+  if (fly.srch) fly.srch.el += dt;
+  const back = () => fly.odor ? fly.odor.mode : (fly.srch ? "search" : "explore");
+
+  // 嗅觉:触角在头前 0.67 格;左右触角各一个读数(用梯度估计,见 plume.js 的说明)
+  PLUME.step(dt);
+  const axn = fly.x + Math.cos(fly.h) * .67, ayn = fly.y + Math.sin(fly.h) * .67;
+  const an = PLUME.antennae(axn, ayn, fly.h);
+  // ⚙ 近场(只喂蘑菇体,不改行为):站在气味源上(脚下或触角那一格)时,至少闻到 源强 ÷ 100。
+  //   羽流模型让源头也一阵有一阵无,风一吹脚下就没味了 —— 实测站在坏果子上尝的那一刻,苯乙醛 ORN 中位只有 11 Hz,
+  //   蘑菇体根本记不住是哪种气味。⚠ 别把它加进行为用的读数:试过,远处出发找食物从 39 秒变 55 秒
+  { const kb = (fly.y | 0) * G + (fly.x | 0), ka = (ayn | 0) * G + (axn | 0), ok = ka >= 0 && ka < G * G;
+    const nf = src => NOSE_OFF ? 0 : Math.max(src[kb], ok ? src[ka] : 0) * NEAR_FIELD;   // NOSE_OFF:测试用的“关嗅觉”
+    fly.nfA = hill(nf(world.odA), ORN.A); fly.nfC = hill(nf(world.odC), ORN.A); }
+  fly.cA = an.A; fly.cB = an.B; fly.cC = an.C || 0;
+  fly.rAL = hill(an.A + an.dAg / 2, ORN.A); fly.rAR = hill(an.A - an.dAg / 2, ORN.A); fly.rB = hill(an.B, ORN.B);
+  fly.rCL = hill((an.C || 0) + (an.dCg || 0) / 2, ORN.A); fly.rCR = hill((an.C || 0) - (an.dCg || 0) / 2, ORN.A);
+  fly.rA = (fly.rAL + fly.rAR) / 2; fly.rC = (fly.rCL + fly.rCR) / 2;
+  fly.pnC = cpnAt(fly.rC); fly.smellC = (fly.pnC.DM6 + fly.pnC.DL1) / 2 > SMELL_A;
+  mbT += dt; fly.kcA = mbMark("A", Math.max(fly.rA, fly.nfA)); fly.kcC = mbMark("C", Math.max(fly.rC, fly.nfC));
+  mbAcc += dt; if (mbAcc >= .1){ mbTick(mbAcc); mbAcc = 0; }
+  mbHistT += dt; if (mbHistT >= 1){ mbHistT = 0; mbHist.push([mbT, fly.UA, fly.UC]); if (mbHist.length > 300) mbHist.shift(); }
+  const pn = pnAt((fly.rAL + fly.rAR) / 2, fly.rB, fly.pn);
+  fly.smellA = (pn[GI.DM1] + pn[GI.VA2]) / 2 > SMELL_A; fly.smellB = pn[GI.DA2] > SMELL_B;
+  // 左右差只对“此刻想追”的气味起作用(学会讨厌的那种不再往浓的一侧拐)
+  fly.trop = TROP_GAIN * ((fly.UA >= .3 ? fly.rAL - fly.rAR : 0) + (fly.UC >= .3 ? fly.rCL - fly.rCR : 0)) / ORN.A.max;
+  const egoUp = fly.egoUp = wrap(PLUME.wind().angle + Math.PI - fly.h);   // ⚙ 风从哪来(相对身体);真果蝇靠触角 JO 感受风
+  fly.surgeCool = Math.max(0, fly.surgeCool - dt); fly.avoidCool = Math.max(0, fly.avoidCool - dt);
+
+  /* ① 状态迁移:每拍只在这里定一次。优先级 进食 > 拒绝 > 其它。
+       以前后面的撞墙判断会在同一拍把“进食”改写成“撞墙”,下一拍又改回来,
+       每 2 ms 翻一次 ⇒ 站在糖上却一口没吃、饥饿涨满(2026-09-24 用户看到的“停着不动”)。 */
+  if (fly.state === "feed"){
+    if (fly.rate < 60 || fly.hunger < 0.05 || fly.smellB){                // 吃着吃着闻到霉味也停(Stensmyr 2012)
+      fly.food = { x: fly.px, y: fly.py };                 // 记在“以为的”坐标里
+      fly.fullT = 6;                                       // ⚙ 吃完 6 秒内不再进食
+      fly.srch = { out: true, len: 1.2, loops: 0, ox: fly.px, oy: fly.py, el: 0, best: 1e9, bestT: 0 };
+      fly.goal = wrap(est + (R() - .5) * 2.4);
+      setState("search"); log(`${fly.smellB ? "闻到霉味，停下不吃了" : fly.hunger < 0.05 ? "吃饱了" : "这格吃光了"}（饥饿 ${fly.hunger.toFixed(2)}），开始在附近兜圈找`);
+    }
+  } else if (fly.rate > 60 && fly.hunger > 0.2 && fly.fullT <= 0 && !fly.smellB){   // ⚙ 霉味在场不吃(Stensmyr 2012)
+    fly.odor = null; setState("feed"); fly.fed++; log(`<b>伸口器</b>：糖 ${fly.s|0} / 苦 ${fly.b|0} Hz → 进食神经元 ${fly.rate|0} Hz`);
+    mbEvent("rew", fly.hunger, "吃到糖，饥饿 " + fly.hunger.toFixed(2));          // 奖励强度随饥饿(饱的果蝇几乎学不到糖)
+  } else if (fly.b > 40 && (fly.rate <= 60 || fly.smellB) && fly.rejT <= 0 && fly.state !== "reject"){
+    // 只在“味觉查表说不吃”或“闻到霉味”时拒绝;光是不饿、刚吃完,而查表说能吃,就不算拒绝,也不罚
+    // ⚙ 往“脚下更不苦”的方向走:用四邻格的苦味差估方向(足上的味觉感受器能分辨左右前后)
+    const bt = (dx, dy) => { const kk = tileAt(fly.x + dx, fly.y + dy); return kk < 0 || world.wall[kk] ? 250 : world.bit[kk]; };
+    const gx = bt(1, 0) - bt(-1, 0), gy = bt(0, 1) - bt(0, -1);
+    const away = Math.hypot(gx, gy) > 5 ? Math.atan2(-gy, -gx) - fly.h : Math.PI;   // 相对身体的方向
+    fly.goal = wrap(est + away + (R() - .5) * .4);
+    fly.rejT = 3;                                          // ⚙ 3 秒内不再重复拒绝 ⇒ 能走出苦斑,不在原地来回掉头
+    setState("reject");
+    if (fly.s > 60){ fly.rejected++; log(fly.rate > 60 ? `<b>拒绝</b>：闻到霉味（DA2 ${fly.pn[GI.DA2]|0} Hz），尝着能吃（进食神经元 ${fly.rate|0} Hz）也不吃` :
+      `<b>拒绝</b>：糖 ${fly.s|0} 却有苦 ${fly.b|0} → 只有 ${fly.rate|0} Hz，不吃`); }
+    { const k = (fly.y | 0) * G + (fly.x | 0); mbEvent("pun", 1, world.odC[k] > 0 ? "尝到坏果子里的苦" : fly.s > 60 ? "糖上长了霉，尝到苦" : "踩到霉斑尝到苦"); }
+  }
+  if (fly.state === "reject" && fly.st > 1.2) setState(back());
+  if (fly.state === "wall" && fly.st > .6 && fly.turn === 0) setState(back());
+  if (fly.state === "explore" && fly.runT <= 0){ fly.goal = wrap(est + (R()-.5) * 2.2); fly.runT = 4 + R()*9; }
+  // 两种果香同时在时,各自的 U 按浓度加权
+  { const wA = fly.smellA ? fly.rA : 0, wC = fly.smellC ? fly.rC : 0; fly.Umix = wA + wC > 0 ? (wA * fly.UA + wC * fly.UC) / (wA + wC) : 0; }
+  const attractive = (fly.smellA && fly.UA >= .3) || (fly.smellC && fly.UC >= .3);
+  // ⚙ 气味行为(规则,按 Álvarez-Salvado 2018 的步行果蝇逆风追踪 / Stensmyr 2012 的霉味回避);“闻到没有”由上面的 PN 查表决定
+  if (fly.state !== "feed" && fly.state !== "reject"){
+    if (fly.smellB && fly.avoidCool <= 0 && (!fly.odor || fly.odor.mode !== "avoid")){
+      fly.odor = { mode: "avoid", el: 0, quiet: 0, dev: (R() - .5) * 1.2, wallSide: R() < .5 ? 1 : -1 }; fly.srch = null;
+      fly.goal = wrap(est + egoUp + Math.PI + (R() - .5) * 1.2);           // 往下风走
+      setState("avoid"); log(`<b>闻到霉味</b>（DA2 投射神经元 ${fly.pn[GI.DA2]|0} Hz）→ 往下风走开`);
+    } else if (fly.Umix <= -.3 && fly.avoidCool <= 0 && (!fly.odor || fly.odor.mode !== "avoid")){
+      // 🧠+⚙ 学会的回避:这股气味的 U 已被蘑菇体压到 −0.3 以下
+      fly.odor = { mode: "avoid", el: 0, quiet: 0, dev: (R() - .5) * 1.2, wallSide: R() < .5 ? 1 : -1, learned: true }; fly.srch = null;
+      setState("avoid"); log(`<b>学会了讨厌</b>：闻到${fly.rC > fly.rA ? "苯乙醛（坏果子）" : "醋味"}，蘑菇体读数 U = ${fly.Umix.toFixed(2)} → 横着走出这股气味`);
+    } else if (fly.Umix >= .3 && !fly.smellB && fly.hunger > .3 && fly.surgeCool <= 0 && fly.fullT <= 0 && (!fly.odor || fly.odor.mode === "cast")){
+      const fresh = !fly.odor;
+      const ua = PLUME.wind().angle + Math.PI, up0 = fly.x * Math.cos(ua) + fly.y * Math.sin(ua);
+      const pk = fly.odor && fly.odor.peak ? fly.odor : { peak: fly.cA, ppx: fly.px, ppy: fly.py };
+      fly.odor = { mode: "surge", el: 0, bestUp: up0, bestT: 0, lost: 0, wallSide: R() < .5 ? 1 : -1, peak: pk.peak, ppx: pk.ppx, ppy: pk.ppy }; fly.srch = null;
+      setState("surge"); if (fresh) log(fly.rC > fly.rA && fly.smellC ? `<b>闻到苯乙醛</b>（DM6 ${fly.pnC.DM6|0} / DL1 ${fly.pnC.DL1|0} Hz，U = ${fly.UC.toFixed(2)}）→ 逆风往上追` :
+        `<b>闻到醋味</b>（DM1 ${fly.pn[GI.DM1]|0} / VA2 ${fly.pn[GI.VA2]|0} Hz，U = ${fly.UA.toFixed(2)}）→ 逆风往上追`);
+    }
+  }
+  if (fly.odor){
+    const o = fly.odor, active = fly.state === o.mode; o.el += dt;          // 撞墙期间照样计时,但不改目标
+    const cAtt = Math.max(fly.UA >= .3 ? fly.cA : 0, fly.UC >= .3 ? fly.cC : 0);
+    if (o.mode !== "avoid" && cAtt > (o.peak || 0)){ o.peak = cAtt; o.ppx = fly.px; o.ppy = fly.py; }
+    // ⚙ 气味追丢了:去“闻到最浓的地方”附近兜圈(复用吃完后的局部搜索),而不是直接走开
+    const searchPeak = (why) => { fly.food = { x: o.ppx, y: o.ppy }; fly.odor = null; fly.surgeCool = 4;
+      fly.srch = { out: false, len: 1.2, loops: 0, ox: fly.px, oy: fly.py, el: 0, best: 1e9, bestT: 0 };
+      if (active || fly.state === "wall") setState("search"); log(`${why}，回到最浓的地方附近兜圈找`); };
+    if (o.mode === "surge"){
+      if (active) fly.goal = wrap(est + egoUp);
+      // 进度 = 沿上风方向走了多远。⚠ 别用“浓度有没有创新高”:羽流是一阵一阵的,早先一阵浓的会让后面永远“没进步”
+      const ua = PLUME.wind().angle + Math.PI, up = fly.x * Math.cos(ua) + fly.y * Math.sin(ua);
+      if (up > o.bestUp + .5){ o.bestUp = up; o.bestT = o.el; }
+      o.lost = attractive ? 0 : o.lost + dt;
+      if (o.el - o.bestT > 6){ fly.odor = null; fly.surgeCool = 8; if (active) setState(back()); log("逆风追了 6 秒没往上风前进（多半被墙挡住），放弃"); }
+      else if (o.lost > .4){ fly.odor = { mode: "cast", el: 0, side: R() < .5 ? 1 : -1, flipT: 0, leg: 0, peak: o.peak, ppx: o.ppx, ppy: o.ppy }; if (active) setState("cast"); }
+    } else if (o.mode === "cast"){
+      // ⚙ 越扫越宽的之字形:每一趟比上一趟长(1.2 → 1.8 → 2.7 → 4 秒),左右交替、垂直于风向。
+      //   ⚠ 第一版每 0.8~1.4 秒就换边,而掉头 180° 本身就要 ~1 秒 ⇒ 几乎一直在原地转身,横向根本没走出去
+      o.flipT -= dt;
+      if (active && o.flipT <= 0){
+        if (o.leg >= 4){ if (o.peak > .3) searchPeak("之字形扫了 4 趟没找回气味"); else { fly.odor = null; setState(back()); log("气味断了，之字形扫了 4 趟没找回来"); } }
+        else { o.side = -o.side; o.flipT = 1.2 * Math.pow(1.5, o.leg++); fly.goal = wrap(est + egoUp + o.side * Math.PI / 2); } }
+      if (fly.odor === o && o.el > 14){ fly.odor = null; if (active) setState(back()); }   // 保险:扫太久(比如一直撞墙)就算了
+    } else if (o.mode === "avoid"){
+      // ⚙ 方向:局部浓度梯度明显(离源头近)⇒ 背着梯度走;否则往下风走。
+      //   只往下风走的话,站在源头上风边时下风正好穿过源头 ⇒ 走进去、被苦弹开、又走进去(实测卡死 6 秒触发保护)
+      //   每步都重新对准 —— 以前只在开始时定一次,一撞墙方向就丢了
+      if (active){
+        const ch = o.learned ? (fly.rC >= fly.rA ? "C" : "A") : "B", src = world["od" + ch], gr = PLUME.grad(fly.x, fly.y);
+        const nb = (dx, dy) => { const kk = tileAt(fly.x + dx, fly.y + dy); return kk < 0 || world.wall[kk] ? 0 : src[kk] * NEAR_FIELD; };
+        const gx = gr[ch + "x"] + (nb(1, 0) - nb(-1, 0)) / 2, gy = gr[ch + "y"] + (nb(0, 1) - nb(0, -1)) / 2;
+        const c = Math.max(gr[ch], nb(0, 0), .05);
+        // 远处:霉味只在源头附近闻得到 ⇒ 往下风走几步就出去了;苯乙醛羽流顺风拖得很长 ⇒ 往下风走等于沿着羽流走,
+        //   一直闻得到、一直躲,直到地图边(实测学过的果蝇找食物反而从 35 秒变 53 秒)⇒ 学来的躲避改成斜着横穿出羽流
+        const far = o.learned ? egoUp + Math.PI + o.wallSide * 1.2 : egoUp + Math.PI + o.dev;
+        fly.goal = Math.hypot(gx, gy) > .2 * c ? wrap(est + Math.atan2(-gy, -gx) - fly.h + o.dev * .5) : wrap(est + far);
+      }
+      o.quiet = (o.learned ? (fly.Umix <= -.3) : fly.smellB) ? 0 : o.quiet + dt;
+      if (o.quiet > 1.5){ fly.odor = null; fly.avoidCool = 6; if (active) setState(back()); }
+    }
+  }
+  if (fly.state === "search" || (fly.srch && fly.state === "wall")){
+    const s = fly.srch, dx = fly.food.x - fly.px, dy = fly.food.y - fly.py, dist = Math.hypot(dx, dy);
+    let quit = "";
+    if (s.out){ if (Math.hypot(fly.px - s.ox, fly.py - s.oy) > s.len){ s.out = false; s.best = dist; s.bestT = s.el; } }
+    else {
+      if (fly.state === "search") fly.goal = Math.atan2(dy, dx);
+      if (dist < s.best - .3){ s.best = dist; s.bestT = s.el; }
+      if (dist < .6){ s.out = true; s.len = Math.min(9, s.len * 1.3); s.loops++; s.ox = fly.px; s.oy = fly.py;
+        fly.goal = wrap(est + Math.PI + (R()-.5) * 1.6); }
+      else if (s.el - s.bestT > 4) quit = "往回走了 4 秒还没更近（多半被墙挡住）";   // ⚙ 直线回家走不通就放弃
+    }
+    if (s.el > 35) quit = "找了 35 秒";
+    if (s.loops > 9) quit = `兜了 ${s.loops} 圈`;
+    if (quit){ fly.srch = null; if (fly.state === "search") setState("explore"); fly.runT = 6; log(`放弃搜索：${quit}`); }
+  }
+
+  // ② 进食:站着吃,不转、不走 —— 于是也不会撞墙改写状态
+  const feeding = fly.state === "feed";
+  if (feeding){
+    const eat = Math.min(world.sug[k], dt * 10);
+    world.sug[k] -= eat; fly.hunger = Math.max(0, fly.hunger - dt * 0.15); dirty.add(k);
+    if (world.odA[k] > world.sug[k]) world.odA[k] = world.sug[k];               // 吃掉多少,那格的醋味就淡多少
+    if (world.odC[k] > world.sug[k]) world.odC[k] = world.sug[k];
+  }
+
+  // ③ 转向:目标只以“FC2 上的一个峰”进入大脑;往哪转由 PFL3→DNa02 决定,不是规则
+  //   目标在 EPG 坐标里 = SUN_REF − goal(与 est = SUN_REF − 峰 同一套换算)
+  if (!feeding){ const sgn = steer(wrap(SUN_REF - fly.goal), (R() - .5) * 6 + fly.trop); fly.turn = sgn.turn; fly.dnL = sgn.dnL; fly.dnR = sgn.dnR; }
+  else { fly.turn = 0; fly.dnL = fly.dnR = 0; }
+  fly.h = wrap(fly.h + fly.turn * TURN * dt);
+  ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, fly.turn);
+
+  // ④ 移动
+  if (!feeding){
+    const v = SPEED * (fly.turn ? 0.35 : 1);      // ⚙ 转身时放慢
+    const nx = fly.x + Math.cos(fly.h) * v * dt, ny = fly.y + Math.sin(fly.h) * v * dt;
+    if (isWall(nx, ny)){
+      // ⚙ 只在“刚撞上”或“上一次转身已经转完还是墙”时换目标 —— 每拍都换的话电路还没转过去目标就又变了
+      if (fly.state !== "wall" || fly.turn === 0){
+        setState("wall");
+        if (fly.odor && (fly.odor.mode === "surge" || fly.odor.mode === "avoid")){   // ⚙ 追味/躲味被墙挡住:沿墙横着走,一直朝同一侧
+          if (fly.state === "wall") fly.odor.wallSide *= -1;  //   已经在沿墙走、转正了还是墙 ⇒ 墙角,换另一侧(否则会顶在墙角里)
+          fly.goal = wrap(est + fly.egoUp + (fly.odor.mode === "avoid" ? Math.PI : 0) + fly.odor.wallSide * Math.PI / 2); }
+        else { const side = R() < .5 ? 1 : -1; fly.goal = wrap(est + side * (1.2 + R())); } }
+    } else {
+      fly.x = nx; fly.y = ny; fly.path += v * dt;
+      fly.px += Math.cos(est) * v * dt; fly.py += Math.sin(est) * v * dt;   // 路径积分只知道 est
+    }
+  }
+
+  // ⑤ 最后一道保险:不在进食、6 秒里**实际走过的路**不到 0.3 格 ⇒ 换个随机方向,并记进日志(正常应不触发)
+  //   ⚠ 别用“离 6 秒前的位置多远”:局部搜索本来就在原地来回兜,净位移天然很小,会误报(第一版就这样)
+  fly.wd += dt;
+  if (feeding) fly.hist = [];
+  if (fly.wd >= 1){ fly.wd = 0; fly.hist.push(fly.path); fly.path = 0; if (fly.hist.length > 6) fly.hist.shift();
+    if (!feeding && fly.hist.length === 6 && fly.hist.reduce((a, v) => a + v, 0) < .3){
+      fly.unstuck++; fly.srch = null; fly.odor = null; fly.goal = wrap(est + (R() - .5) * 2 * Math.PI); fly.runT = 5; setState("explore");
+      fly.hist = []; log(`卡住了 6 秒，随机换个方向（第 ${fly.unstuck} 次）`); }
+  }
+  return { b, est };
+}
+
+/* ─────────── 画 ─────────── */
+const cv = document.getElementById("map"), cx = cv.getContext("2d"), MAPPX = 768, S = MAPPX / G;   // 地图空间:768 px = G 格
+const tiles = document.createElement("canvas"); tiles.width = tiles.height = MAPPX; const tx = tiles.getContext("2d");
+
+/* ─────────── 镜头:缩放 / 拖动 / 复位 / 跟随 ───────────
+   z = 1 是“整张图正好装进画布”;k = 地图 px → 画布 px。(mx, my) = 画布中心对着的地图点。 */
+const cam = { z: 1, mx: MAPPX / 2, my: MAPPX / 2, follow: false, dpr: 1 };
+const Z_MAX = 10, Z_FOLLOW = 3;
+const camK = () => Math.min(cv.width, cv.height) / MAPPX * cam.z;
+function camClamp(){                                  // 看出去不越过地图边;整张图都装得下时就居中
+  const k = camK();
+  if (!(k > 0) || !isFinite(cam.mx) || !isFinite(cam.my)){ cam.mx = cam.my = MAPPX / 2; return; }   // 画布 0 高时别算出 NaN
+  const hw = cv.width / 2 / k, hh = cv.height / 2 / k;
+  cam.mx = 2 * hw >= MAPPX ? MAPPX / 2 : Math.min(MAPPX - hw, Math.max(hw, cam.mx));
+  cam.my = 2 * hh >= MAPPX ? MAPPX / 2 : Math.min(MAPPX - hh, Math.max(hh, cam.my));
+}
+function camZoom(f, px, py){                          // 以画布上 (px, py) 这一点为不动点缩放(画布像素);返回有没有真的变
+  if (px === undefined){ px = cv.width / 2; py = cv.height / 2; }
+  const z0 = cam.z, k0 = camK(), ax = (px - cv.width / 2) / k0 + cam.mx, ay = (py - cv.height / 2) / k0 + cam.my;
+  cam.z = Math.min(Z_MAX, Math.max(1, cam.z * f));
+  if (!cam.follow && k0 > 0){ const k1 = camK(); cam.mx = ax - (px - cv.width / 2) / k1; cam.my = ay - (py - cv.height / 2) / k1; }
+  camClamp(); camUI(); return cam.z !== z0;
+}
+function camFollow(on){
+  cam.follow = on; if (on && cam.z < Z_FOLLOW) cam.z = Z_FOLLOW;
+  camClamp(); camUI();
+}
+function camUI(){
+  const b = document.getElementById("zFol"); if (!b) return;
+  b.setAttribute("aria-pressed", cam.follow); b.textContent = cam.follow ? "◉ 跟随中" : "◎ 跟随";
+  const zin = document.getElementById("zIn"), zout = document.getElementById("zOut"), outOff = cam.z <= 1.0001, inOff = cam.z >= Z_MAX - 1e-4;
+  // 按钮把自己变灰之前,把键盘焦点挪给另一个缩放按钮(不是“复位”:多按一下 Enter 会把缩放全撤掉),
+  //   而且不滚动页面(手机上吸顶按钮行落在 scroll-padding 里,不加 preventScroll 页面会往上跳一截)
+  if (outOff && document.activeElement === zout) zin.focus({ preventScroll: true });
+  if (inOff && document.activeElement === zin) zout.focus({ preventScroll: true });
+  zout.disabled = outOff; zin.disabled = inOff;
+  cv.classList.toggle("zoomed", !outOff);
+  const zl = document.getElementById("zLvl"); if (zl) zl.textContent = "×" + cam.z.toFixed(cam.z < 10 ? 1 : 0);
+}
+let lastOut = null;                                   // 最近一帧的 {b, est}:改了画布尺寸要立刻重画一次(改尺寸会清空画布)
+function camResize(){                                 // 画布像素 = 显示尺寸 × 像素密度(最多 2):放大后也不糊
+  const r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
+  cam.dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+  const w = Math.round(r.width * cam.dpr), h = Math.round(r.height * cam.dpr);
+  if (!w || !h) return;
+  if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; camClamp(); if (lastOut) draw(lastOut.b, lastOut.est); }
+}
+if (typeof ResizeObserver !== "undefined") new ResizeObserver(camResize).observe(cv);
+// 换到像素密度不同的屏幕上(1× 显示器 ↔ Retina):显示尺寸没变,ResizeObserver 不会触发 ⇒ 另外盯着分辨率
+{ const watch = () => { if (!globalThis.matchMedia) return;
+    matchMedia(`(resolution: ${globalThis.devicePixelRatio || 1}dppx)`).addEventListener("change", () => { camResize(); watch(); }, { once: true }); };
+  watch(); }
+{ // 输入:单指/鼠标左键拖动 = 平移(会退出跟随);双指 = 捏合缩放;滚轮 / 触控板捏合 = 缩放;双击 = 放大
+  const pts = new Map(); let pinch = null, moved = 0, multi = false;
+  const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cam.dpr, (e.clientY - r.top) * cam.dpr]; };
+  const seed = () => {                              // 正好两根手指时,以它们当前位置为捏合的起点;否则没有捏合
+    if (pts.size === 2){ const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), m: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; }
+    else pinch = null; };
+  cv.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;          // 右键/中键不拖
+    pts.set(e.pointerId, pos(e)); moved = 0; if (pts.size >= 2) multi = true;
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    seed(); });
+  cv.addEventListener("pointermove", e => { if (!pts.has(e.pointerId)) return;
+    if (e.pointerType === "mouse" && e.buttons === 0){ up(e); return; }  // 丢了 pointerup(比如右键菜单吞了它):别在悬停时一直拖
+    const p0 = pts.get(e.pointerId), p1 = pos(e); pts.set(e.pointerId, p1);
+    if (pts.size === 1){
+      if (multi) return;                              // 捏合刚结束、还剩一根手指:不当成拖动(否则跟随会被误关)
+      const dx = p1[0] - p0[0], dy = p1[1] - p0[1]; moved += Math.abs(dx) + Math.abs(dy);
+      if (cam.follow && moved > 6 * cam.dpr) camFollow(false);        // 手动拖动 ⇒ 不再跟随
+      if (!cam.follow){ const k = camK(); cam.mx -= dx / k; cam.my -= dy / k; camClamp(); }
+    } else if (pts.size === 2 && pinch){
+      const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      if (!cam.follow){ const k = camK(); cam.mx -= (m[0] - pinch.m[0]) / k; cam.my -= (m[1] - pinch.m[1]) / k; }
+      camZoom(d / Math.max(1, pinch.d), m[0], m[1]); pinch = { d, m };
+    } });
+  const up = e => { pts.delete(e.pointerId); seed(); if (!pts.size) multi = false; };
+  for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) cv.addEventListener(t, up);
+  // 滚轮在地图上一律用来缩放(到头了也不放行 —— 放行的话会变成“往下滚页面、往上却一直放大”,滚不回去);
+  //   页面从右栏或卡片上滚。deltaMode 1 = 行、2 = 页,先换成像素
+  cv.addEventListener("wheel", e => {
+    if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // 横向滑动不管
+    e.preventDefault();
+    const [px, py] = pos(e), dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    // ctrl+滚轮 = 触控板捏合(每次只有几个像素);鼠标按住 ctrl 滚一格是 100 px,限一下,别一格跳 2.7 倍
+    const f = e.ctrlKey ? Math.exp(-Math.max(-25, Math.min(25, dy)) / 100) : Math.exp(-dy * 0.0015);
+    camZoom(f, px, py);
+  }, { passive: false });
+  cv.addEventListener("dblclick", e => { const [px, py] = pos(e); camZoom(2, px, py); });
+  const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
+  on("zIn", () => camZoom(1.6)); on("zOut", () => camZoom(1 / 1.6));
+  on("zFit", () => { cam.z = 1; camFollow(false); });
+  on("zFol", () => camFollow(!cam.follow));
+  camResize(); camUI();
+}
+const dirty = new Set();
+const odCv = document.createElement("canvas"); odCv.width = odCv.height = G; const odCx = odCv.getContext("2d"), odImg = odCx.createImageData(G, G);
+function tileColor(k){
+  if (world.wall[k]) return "#3a3444";
+  const s = world.sug[k] / 200, b = world.bit[k] / 200;
+  const base = [23,21,29], su = [255,180,74], bi = [87,201,168], mix = [185,138,216];
+  let c = base.slice();
+  const m = Math.min(s, b), sOnly = s - m, bOnly = b - m;
+  for (let i = 0; i < 3; i++) c[i] += (su[i]-base[i])*sOnly*.9 + (bi[i]-base[i])*bOnly*.9 + (mix[i]-base[i])*m*1.1;
+  return `rgb(${c.map(v => Math.max(0, Math.min(255, v|0)))})`;
+}
+function paintTile(k){ const x = k % G, y = k / G | 0; tx.fillStyle = tileColor(k); tx.fillRect(x*S, (G-1-y)*S, S, S);
+  if (world.wall[k]){ tx.fillStyle = "rgba(255,255,255,.04)"; tx.fillRect(x*S, (G-1-y)*S, S, 2); } }
+function paintAll(){ for (let k = 0; k < G*G; k++) paintTile(k); }
+const sx = x => x * S, sy = y => (G - y) * S;
+/* ─────────── 复眼视野 ─────────── */
+// 小眼方位:H = q − p 水平、V = p + q 背腹(背缘区 DRA 在 V 高端 ⇒ 数据定的);
+// 1 个 H 单位 = 4.33°、1 个 V 单位 = 2.5°(小眼间角 5° 的六边形)。⚠ 假设 H 大 = 正前。
+const OM = VZ.om.map(([eye, H, V]) => { const a = (VZ.Hmax - H) * 4.33 - 5;
+  return { az: (eye ? a : -a) * Math.PI / 180, el: (V - VZ.Vmid) * 2.5 * Math.PI / 180 }; });
+const WALL_H = 4, EYE_H = 1;                       // mm:墙高、眼离地高(一格 = 2 mm)
+function rayDist(ang){ for (let d = .3; d < 40; d += .25){ if (isWall(fly.x + Math.cos(ang)*d, fly.y + Math.sin(ang)*d)) return d; } return 40; }
+function viewAt(az, el, rays){                      // 返回 [r,g,b] 与亮度
+  const k = Math.round((az * 180 / Math.PI + 180) / 5) % 72, top = rays[k];
+  const wallTop = Math.atan2(WALL_H - EYE_H, top * 2), floorEdge = -Math.atan2(EYE_H, top * 2);
+  const light = sunOn ? 1 : 0.06;
+  if (el < wallTop && el > floorEdge){ const f = Math.max(.25, 1 - top / 30); return [[92*f*light, 80*f*light, 104*f*light], .12*light]; }
+  if (el <= floorEdge){
+    let c = [26*light, 23*light, 30*light];
+    if (showTaste){                                  // 只给你看:地面上这一点有没有糖/苦(亮度那一项不变,ER 看不到它)
+      const d = EYE_H / Math.tan(-el) / 2, a = fly.h + az, kk = tileAt(fly.x + Math.cos(a)*d, fly.y + Math.sin(a)*d);
+      if (kk >= 0 && !world.wall[kk]){ const su = world.sug[kk] / 200, bi = world.bit[kk] / 200, m = Math.min(su, bi);
+        if (su > .05 || bi > .05) c = [c[0] + 229*(su-m) + 160*m, c[1] + 157*(su-m) + 178*(bi-m) + 110*m, c[2] + 48*(su-m) + 145*(bi-m) + 196*m]; } }
+    return [c, .06*light];
+  }
+  const se = wrap(sunAz - fly.h), dA = Math.acos(Math.min(1, Math.cos(el)*Math.cos(0.7)*Math.cos(az - se) + Math.sin(el)*Math.sin(0.7)));
+  if (sunOn && dA < .14) return [[255, 236, 170], 1];
+  const t = Math.max(0, Math.min(1, el / 1.3));
+  return [[(111 - 60*t)*light, (134 - 70*t)*light, (168 - 60*t)*light], (.45 - .15*t)*light];
+}
+const eyeCv = document.getElementById("eye"), eyeCx = eyeCv.getContext("2d");
+const erCv = document.getElementById("erbar"), erCx = erCv.getContext("2d");
+function drawEye(est){
+  const W = eyeCv.width, Hh = eyeCv.height, k = (W/2 - 6) / (150 * Math.PI / 180), cy = Hh / 2;
+  const rays = Array.from({length:72}, (_, i) => rayDist(fly.h + (i*5 - 180) * Math.PI / 180));
+  eyeCx.fillStyle = "#0b0a0e"; eyeCx.fillRect(0, 0, W, Hh);
+  for (const o of OM){ const [c] = viewAt(o.az, o.el, rays);
+    eyeCx.fillStyle = `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+    eyeCx.beginPath(); eyeCx.arc(W/2 - o.az * k, cy - o.el * k, 4.6, 0, 7); eyeCx.fill(); }
+  eyeCx.strokeStyle = "rgba(236,230,220,.18)"; eyeCx.beginPath(); eyeCx.moveTo(W/2, 0); eyeCx.lineTo(W/2, Hh); eyeCx.stroke();
+  const mark = (ego, col, label, y) => {             // ego:相对身体的方向(左为正)
+    eyeCx.fillStyle = col; eyeCx.font = "600 15px " + getComputedStyle(document.body).fontFamily; eyeCx.textAlign = "center";
+    if (Math.abs(ego) > 2.62){ eyeCx.fillText(label + (ego > 0 ? "（左后）" : "（右后）"), ego > 0 ? 60 : W - 60, y); return; }
+    const X = W/2 - ego * k; eyeCx.strokeStyle = col; eyeCx.setLineDash([6, 5]); eyeCx.lineWidth = 2;
+    eyeCx.beginPath(); eyeCx.moveTo(X, y + 4); eyeCx.lineTo(X, Hh - 4); eyeCx.stroke(); eyeCx.setLineDash([]);
+    eyeCx.fillText(label, X, y); };
+  if (fly.state !== "feed") mark(wrap(fly.goal - est), "#f9c54a", "想去", 15);
+  mark(fly.egoUp, "#8fd3ff", "上风", 31);
+  // ER:眼平面(仰角 15°)上 36 个 10° 方位箱的亮度 → 感受野加权
+  const pano = Array.from({length:36}, (_, i) => viewAt((-175 + i*10) * Math.PI / 180, .26, rays)[1]);
+  const n = VZ.rf.length, cw = erCv.width / n;
+  // 每个 ER 的读数 = 感受野里的平均亮度;按本帧最亮的那个归一 ⇒ 看得出“谁看到了太阳/谁对着墙”
+  const vals = VZ.rf.map(rf => { let s = 0, w = 0; for (let i = 0; i < 36; i++){ s += rf[i]*pano[i]; w += rf[i]; } return s / (w + 1e-9); });
+  const vmax = Math.max(...vals, 0.05), vmin = Math.min(...vals);
+  vals.forEach((raw, j) => { const v = sunOn ? (raw - vmin) / (vmax - vmin + 1e-9) : 0;
+    const m = [[10,8,25],[60,15,110],[140,40,120],[220,80,80],[250,160,60],[252,240,170]], x = v*5, i0 = Math.min(4, x|0), f = x - i0;
+    erCx.fillStyle = `rgb(${m[i0].map((c, q) => Math.round(c + (m[i0+1][q]-c)*f))})`; erCx.fillRect(j*cw, 0, cw + .5, erCv.height); });
+  erCx.fillStyle = "rgba(236,230,220,.35)"; erCx.fillRect(erCv.width/2, 0, 1, erCv.height);
+}
+
+function draw(b, est){
+  for (const k of dirty) paintTile(k); dirty.clear();
+  const W = cv.width, H = cv.height, u = Math.min(W, H) / MAPPX;      // u:屏幕上的 UI(风向、太阳)跟着画布大小缩放
+  if (cam.follow){ cam.mx += (sx(fly.x) - cam.mx) * .2; cam.my += (sy(fly.y) - cam.my) * .2; }   // 平滑跟上
+  camClamp();
+  const k = camK();
+  cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = "#0b0a0e"; cx.fillRect(0, 0, W, H);
+  cx.setTransform(k, 0, 0, k, W / 2 - k * cam.mx, H / 2 - k * cam.my);
+  cx.imageSmoothingEnabled = false; cx.drawImage(tiles, 0, 0);          // 格子放大后保持方块,不糊
+  if (showOdor){ PLUME.render(odImg.data, G, G, { alpha: .6, sA: .35, sB: .35, sC: .35 }); odCx.putImageData(odImg, 0, 0);
+    cx.imageSmoothingEnabled = true; cx.drawImage(odCv, 0, 0, MAPPX, MAPPX); }
+  // 足迹
+  cx.lineWidth = 2; cx.lineCap = "round";
+  for (let i = 1; i < trail.length; i++){ const p = trail[i-1], q = trail[i];
+    const a = .15 + .6 * i / trail.length;
+    cx.strokeStyle = q.st === "search" ? `rgba(255,180,74,${a})` : q.st === "reject" ? `rgba(87,201,168,${a})` : `rgba(236,230,220,${a*.8})`;
+    cx.beginPath(); cx.moveTo(sx(p.x), sy(p.y)); cx.lineTo(sx(q.x), sy(q.y)); cx.stroke(); }
+  // 它以为的食物位置(把路径积分坐标搬回真实地图)
+  if (fly.food){ const fx = fly.x + (fly.food.x - fly.px), fy = fly.y + (fly.food.y - fly.py);
+    cx.strokeStyle = "#ffb44a"; cx.setLineDash([4,4]); cx.lineWidth = 2; cx.beginPath(); cx.arc(sx(fx), sy(fy), 10, 0, 7); cx.stroke(); cx.setLineDash([]); }
+  // 太阳方向(画在画布边缘,屏幕坐标)与关灯遮罩
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  { const R0 = Math.min(W, H) / 2 - 14 * u, ax = W / 2 + R0 * Math.cos(sunAz), ay = H / 2 - R0 * Math.sin(sunAz);
+    cx.globalAlpha = sunOn ? 1 : .25; cx.fillStyle = "#ffb44a"; cx.beginPath(); cx.arc(ax, ay, 10 * u, 0, 7); cx.fill(); cx.globalAlpha = 1; }
+  if (!sunOn){ cx.fillStyle = "rgba(5,4,10,.35)"; cx.fillRect(0, 0, W, H); }
+  cx.setTransform(k, 0, 0, k, W / 2 - k * cam.mx, H / 2 - k * cam.my);
+  // 果蝇
+  cx.save(); cx.translate(sx(fly.x), sy(fly.y)); cx.rotate(-fly.h + Math.PI/2);
+  cx.fillStyle = "rgba(236,230,220,.35)";
+  cx.beginPath(); cx.ellipse(-7, 3, 4, 10, -.4, 0, 7); cx.fill(); cx.beginPath(); cx.ellipse(7, 3, 4, 10, .4, 0, 7); cx.fill();
+  cx.fillStyle = "#ece6dc"; cx.beginPath(); cx.ellipse(0, 4, 5, 10, 0, 0, 7); cx.fill();
+  cx.fillStyle = "#c84a3a"; cx.beginPath(); cx.arc(0, -8, 4.5, 0, 7); cx.fill();
+  if (fly.state === "feed"){ cx.strokeStyle = "#ffb44a"; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(0, -12); cx.lineTo(0, -18); cx.stroke(); }
+  cx.restore();
+  // 风往哪吹(屏幕左上角)
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  { const wa = PLUME.wind().angle; cx.save(); cx.translate(46 * u, 46 * u); cx.scale(u, u); cx.fillStyle = "rgba(11,10,14,.72)"; cx.beginPath(); cx.arc(0, 0, 32, 0, 7); cx.fill();
+    cx.rotate(-wa); cx.strokeStyle = "#8fd3ff"; cx.lineWidth = 4; cx.lineCap = "round";
+    cx.beginPath(); cx.moveTo(-18, 0); cx.lineTo(18, 0); cx.moveTo(18, 0); cx.lineTo(8, -9); cx.moveTo(18, 0); cx.lineTo(8, 9); cx.stroke(); cx.restore(); }
+  drawEB(b);
+  if (frameN % 3 === 0) drawEye(est);                 // 视野每 3 帧画一次,省电
+}
+function drawEB(b){
+  const c = document.getElementById("eb").getContext("2d"), W_ = 220, m = W_/2, R1 = 100, R0 = 64;
+  c.clearRect(0, 0, W_, W_);
+  const mag = [[10,8,25],[60,15,110],[140,40,120],[220,80,80],[250,160,60],[252,240,170]];
+  const lut = v => { v = Math.min(1, Math.max(0, v)) * 5; const i = Math.min(4, v|0), f = v - i;
+    return `rgb(${mag[i].map((x, k) => Math.round(x + (mag[i+1][k]-x)*f))})`; };
+  for (let i = 0; i < M; i++){ const a0 = th[i] - Math.PI/M, a1 = th[i] + Math.PI/M; c.fillStyle = lut(X[i]);
+    c.beginPath(); c.arc(m, m, R1, -a1 - Math.PI/2, -a0 - Math.PI/2); c.arc(m, m, R0, -a0 - Math.PI/2, -a1 - Math.PI/2, true); c.fill(); }
+  c.strokeStyle = "#f9c54a"; c.lineWidth = 5; c.lineCap = "round";
+  c.beginPath(); c.moveTo(m, m); c.lineTo(m - 54*Math.sin(b.a), m - 54*Math.cos(b.a)); c.stroke();
+}
+
+/* ─────────── 界面 ─────────── */
+const $ = id => document.getElementById(id);
+function tableHTML(){
+  const L = TT.levels; let h = `<table><tr><th>糖 ↓ 苦 →</th>${L.map(v => `<th>${v}</th>`).join("")}</tr>`;
+  TT.rate.forEach((row, i) => h += `<tr><th>${L[i]} Hz</th>${row.map(v => `<td style="color:${v > 60 ? "#ffb44a" : "#8f889c"}">${Math.round(v)}</td>`).join("")}</tr>`);
+  return h + "</table>"; }
+$("tbl").innerHTML = tableHTML();
+function start(seed){ world = genWorld(seed); paintAll();
+  PLUME.init({ wall: world.wall, sug: world.odA, bit: world.odB, bad: world.odC },
+             { seed, windAngle: $("windAz").value * Math.PI / 180, windSpeed: 10, qB: 0.01 });   // ⚙ 苦斑的霉味散发量是糖斑醋味的一半
+  for (let i = 0; i < 10; i++) PLUME.step(1);        // 先吹 10 秒,让气味羽流铺开
+  mbReset();
+  newFly(); $("seed").value = seed; }
+$("bNew").onclick = () => start(parseInt($("seed").value, 10) || 1);
+$("bRand").onclick = () => start(Math.floor(Math.random() * 1e8));
+$("bSun").onclick = () => { sunOn = !sunOn; $("bSun").setAttribute("aria-pressed", sunOn);
+  $("bSun").textContent = sunOn ? "☀ 太阳：开" : "☾ 太阳：关（黑暗）"; log(sunOn ? "开灯：太阳重新校准指南针" : "<b>关灯</b>：指南针只能靠自己记"); };
+$("sunAz").oninput = e => { sunAz = e.target.value * Math.PI / 180; };
+$("windAz").oninput = e => PLUME.setWind(e.target.value * Math.PI / 180);
+$("bOdor").onclick = () => { showOdor = !showOdor; $("bOdor").setAttribute("aria-pressed", showOdor); };
+$("bTaste").onclick = () => { showTaste = !showTaste; $("bTaste").setAttribute("aria-pressed", showTaste); };
+const glCv = $("glom"), glCx = glCv.getContext("2d");
+const mhCv = $("mbHist"), mhCx = mhCv.getContext("2d"), mcCv = $("mbComp"), mcCx = mcCv.getContext("2d");
+function drawMB(){
+  { const W = mhCv.width, H = mhCv.height, y = u => 8 + (3 - Math.max(-1, Math.min(3, u))) / 4 * (H - 16);   // U ∈ [−1, 3]
+    mhCx.clearRect(0, 0, W, H); mhCx.font = "600 12px " + getComputedStyle(document.body).fontFamily;
+    mhCx.strokeStyle = "rgba(236,230,220,.14)"; mhCx.beginPath(); mhCx.moveTo(0, y(0)); mhCx.lineTo(W, y(0)); mhCx.stroke();
+    mhCx.setLineDash([4, 4]); mhCx.strokeStyle = "rgba(236,230,220,.35)";
+    for (const t of [.3, -.3]){ mhCx.beginPath(); mhCx.moveTo(0, y(t)); mhCx.lineTo(W, y(t)); mhCx.stroke(); } mhCx.setLineDash([]);
+    mhCx.fillStyle = "#8f889c"; mhCx.fillText("追", 4, y(.3) - 4); mhCx.fillText("躲", 4, y(-.3) + 13);
+    if (mbHist.length > 1){ const t1 = mbHist[mbHist.length - 1][0], t0 = Math.max(mbHist[0][0], t1 - 300), X = t => (t - t0) / Math.max(1, t1 - t0) * (W - 30) + 24;
+      for (const [idx, col] of [[1, "#ffcd6e"], [2, "#cd96ff"]]){ mhCx.strokeStyle = col; mhCx.lineWidth = 2.5; mhCx.beginPath();
+        mbHist.forEach((h, i) => { if (h[0] < t0) return; i ? mhCx.lineTo(X(h[0]), y(h[idx])) : mhCx.moveTo(X(h[0]), y(h[idx])); }); mhCx.stroke(); }
+      mhCx.fillStyle = "#8f889c"; mhCx.textAlign = "right"; mhCx.fillText("最近 " + Math.round(t1 - t0) + " 秒", W - 4, H - 4); mhCx.textAlign = "left"; } }
+  { const W = mcCv.width, H = mcCv.height, n = MB.comps.length, bw = W / n, base = H - 34, fa = mbCompFrac("A"), fc = mbCompFrac("C");
+    mcCx.clearRect(0, 0, W, H); mcCx.font = "600 12px " + getComputedStyle(document.body).fontFamily; mcCx.textAlign = "center";
+    MB.comps.forEach((c, i) => { const x = i * bw;
+      [[fa[i], "#ffcd6e", .14], [fc[i], "#cd96ff", .52]].forEach(([v, col, ox]) => { const w = bw * .32;
+        mcCx.fillStyle = "#1c1a23"; mcCx.fillRect(x + bw * ox, 6, w, base - 6);
+        if (v !== null){ mcCx.fillStyle = col; const h = v * (base - 6); mcCx.fillRect(x + bw * ox, base - h, w, h); } });
+      mcCx.fillStyle = c.conf === "confirmed" ? "#ece6dc" : "#6f6a7a"; mcCx.fillText(c.name, x + bw / 2, base + 14);
+      mcCx.fillStyle = c.val > 0 ? "#7fd6a4" : "#e58a6e"; mcCx.fillText(c.val > 0 ? "趋近" : "回避", x + bw / 2, base + 28); }); }
+}
+$("bLearn").onclick = () => { mbLearn = !mbLearn; $("bLearn").setAttribute("aria-pressed", mbLearn); $("bLearn").textContent = mbLearn ? "学习：开" : "学习：关"; };
+$("bForget").onclick = () => { mbReset(); log("清空了蘑菇体的记忆"); };
+/* ─────────── 界面:卡片折叠、设置面板、说明弹窗 ─────────── */
+{ let saved = {}; try { saved = JSON.parse(localStorage.getItem("flyCards") || "{}"); } catch (e) {}
+  const setOpen = (card, on) => { card.classList.toggle("open", on); card.querySelector(".ch").setAttribute("aria-expanded", on); };
+  document.querySelectorAll(".card[data-card]").forEach(card => {
+    setOpen(card, !!saved[card.dataset.card]);
+    card.addEventListener("click", e => {
+      const onHead = e.target.closest(".ch");
+      if (card.classList.contains("open") && !onHead) return;      // 展开后只有点标题才收起(免得读着读着误触)
+      setOpen(card, !card.classList.contains("open"));
+      saved[card.dataset.card] = card.classList.contains("open");
+      try { localStorage.setItem("flyCards", JSON.stringify(saved)); } catch (e) {}
+    });
+  });
+  const top = $("top"), panel = $("setPanel"), bSet = $("bSet"), mbox = document.querySelector ? document.querySelector(".mapbox") : null, root = document.documentElement;
+  // 量高度:--topH 给吸顶地图定位;--mapB(地图下沿)给手机上的设置面板定高度;scroll-padding 让键盘焦点别停在吸顶地图/顶栏下面
+  // 吸顶位置要把刘海的安全边距算进去:直接读 CSS 解出来的 top(已含 env(safe-area-inset-top))
+  const setTop = () => { const th = top.offsetHeight, wide = !!(globalThis.matchMedia && matchMedia("(min-width:820px)").matches);
+    root.style.setProperty("--topH", th + "px");
+    const cs = mbox && globalThis.getComputedStyle ? parseFloat(getComputedStyle(top).top) || 0 : 0, mb = cs + th + (mbox ? mbox.offsetHeight : 0) + 10;
+    root.style.setProperty("--mapB", mb + "px");
+    root.style.scrollPaddingTop = (wide ? cs + th + 8 : mb + 6) + "px"; };
+  setTop(); addEventListener("resize", setTop);
+  if (typeof ResizeObserver !== "undefined"){ const ro = new ResizeObserver(setTop); ro.observe(top); if (mbox) ro.observe(mbox); }
+  const showSet = on => { panel.hidden = !on; bSet.setAttribute("aria-expanded", on); };
+  bSet.onclick = () => showSet(panel.hidden);
+  addEventListener("keydown", e => { if (e.key === "Escape" && !panel.hidden){ showSet(false); bSet.focus(); } });
+  // 点面板外面 = 关面板;这一下别再顺带点开下面的卡片 —— 吞掉“这根手指”抬起时的那次 click。
+  //   跟着手指走,不按时间:按下后拖动/滚动不产生 click 的话,抬起后就作废,不会吞掉下一次真正的点击
+  let swallowId = null;
+  addEventListener("pointerdown", e => { swallowId = null; if (!panel.hidden && !top.contains(e.target)){ showSet(false); swallowId = e.pointerId; } }, true);
+  const unarm = e => { if (e.pointerId === swallowId) setTimeout(() => { if (swallowId === e.pointerId) swallowId = null; }, 60); };
+  addEventListener("pointerup", unarm, true); addEventListener("pointercancel", e => { if (e.pointerId === swallowId) swallowId = null; }, true);
+  addEventListener("contextmenu", () => { swallowId = null; }, true);            // 右键菜单会吞掉 pointerup
+  // 只吞“同一根指针”的 click;键盘触发的 click 没有指针(pointerId −1 / detail 0),永远不吞
+  addEventListener("click", e => { if (swallowId === null) return;
+    const same = e.pointerId !== undefined ? e.pointerId === swallowId : e.detail > 0;
+    if (same){ swallowId = null; e.stopPropagation(); e.preventDefault(); } }, true);
+  panel.addEventListener("focusout", e => { if (e.relatedTarget && !top.contains(e.relatedTarget)) showSet(false); });   // Tab 出面板就收起
+  const dlg = $("info"); let downOut = false, upOut = false;
+  $("bInfo").onclick = () => { showSet(false); dlg.showModal(); };
+  $("bInfoX").onclick = () => dlg.close();
+  // 点弹窗外的暗处关闭 —— 要按下和松开都在暗处(否则在文字上拖选、松手在外面也会关)
+  dlg.addEventListener("pointerdown", e => { downOut = e.target === dlg; upOut = false; });
+  dlg.addEventListener("pointerup", e => { upOut = e.target === dlg; });
+  dlg.addEventListener("click", e => { if (e.target === dlg && downOut && upOut) dlg.close(); downOut = upOut = false; });
+}
+function drawGlom(){
+  const bars = OT.glomeruli.filter(g => g !== "DA2").map((g, i) => [g, fly.pn[OT.glomeruli.indexOf(g)], "#ffcd6e"])
+    .concat([["DM6", fly.pnC.DM6, "#cd96ff"], ["DL1", fly.pnC.DL1, "#cd96ff"], ["VL2a", fly.pnC.VL2a, "#cd96ff"], ["DA2", fly.pn[GI.DA2], "#6ee1c8"]]);
+  const W = glCv.width, H = glCv.height, n = bars.length, bw = W / n, base = H - 22;
+  glCx.clearRect(0, 0, W, H); glCx.font = "600 13px " + getComputedStyle(document.body).fontFamily; glCx.textAlign = "center";
+  bars.forEach(([g, v0, col], i) => { const v = v0 || 0, h = Math.min(1, v / 330) * (base - 16), x = i * bw + bw * .18, w = bw * .64;
+    glCx.fillStyle = "#1c1a23"; glCx.fillRect(x, 16, w, base - 16);
+    glCx.fillStyle = col; glCx.fillRect(x, base - h, w, h);
+    glCx.fillStyle = "#8f889c"; glCx.fillText(g, i * bw + bw / 2, H - 5);
+    glCx.fillStyle = "#ece6dc"; glCx.fillText(v < 1 ? "0" : Math.round(v), i * bw + bw / 2, 12); });
+  // 门槛虚线:醋味/苯乙醛是两个嗅小球平均过 30 Hz,霉味是 DA2 过 100 Hz —— 各画在自己那几根柱子上
+  glCx.strokeStyle = "rgba(236,230,220,.35)"; glCx.setLineDash([4, 4]);
+  { const ty = base - (SMELL_A / 330) * (base - 16), tb = base - (SMELL_B / 330) * (base - 16); glCx.beginPath();
+    glCx.moveTo(0, ty); glCx.lineTo((n - 1) * bw, ty); glCx.moveTo((n - 1) * bw, tb); glCx.lineTo(W, tb); glCx.stroke(); }
+  glCx.setLineDash([]);
+}
+$("bPause").onclick = () => { paused = !paused; $("bPause").textContent = paused ? "继续" : "暂停"; };
+
+$("thrL").style.left = (50 - 4/40*50) + "%"; $("thrR").style.left = (50 + 4/40*50) + "%";
+let last = performance.now(), R = rng(7), acc = 0, frameN = 0, fpsN = 0, fpsT = 0, slow = 0;
+function frame(now){
+  const dtF = Math.min(.05, (now - last) / 1000); last = now;
+  let out = null;
+  if (!paused){
+    const n = Math.max(1, Math.round(dtF * (+$("spd").value) / P.dt));
+    for (let i = 0; i < n; i++) out = flyStep(P.dt, R);
+    if (frameN++ % 2 === 0){ trail.push({x: fly.x, y: fly.y, st: fly.state}); if (trail.length > 1600) trail.shift(); }
+  }
+  if (!out){ const b = bump(); out = { b, est: wrap(SUN_REF - b.a) }; }
+  lastOut = out; draw(out.b, out.est);
+  $("rH").textContent = deg(fly.h) + "°"; $("rE").textContent = deg(out.est) + "°";
+  const e = Math.abs(deg(wrap(out.est - fly.h))); $("rErr").textContent = e + "°"; $("rErr").style.color = e < 15 ? "#7fd6a4" : "#ffb44a";
+  $("rPos").textContent = (Math.hypot(fly.px - fly.x, fly.py - fly.y) * 2).toFixed(1) + " mm";
+  $("tS").textContent = fly.s | 0; $("tB").textContent = fly.b | 0; $("tR").textContent = Math.round(fly.rate) + " Hz";
+  $("tBar").style.width = Math.min(100, fly.rate / 3) + "%"; $("hBar").style.width = (fly.hunger * 100) + "%";
+  $("oA").textContent = `${fly.rAL|0} / ${fly.rAR|0} Hz`; $("oAb").style.width = Math.min(100, (fly.rAL + fly.rAR) / 3) + "%";
+  $("oC").textContent = `${fly.rC|0} Hz`; $("oCb").style.width = Math.min(100, fly.rC / 1.5) + "%";
+  $("oB").textContent = `${fly.rB|0} Hz`; $("oBb").style.width = Math.min(100, fly.rB / 3) + "%";
+  if (frameN % 3 === 1) drawGlom();
+  $("oSmell").textContent = fly.smellB ? `闻到霉味（DA2 ${fly.pn[GI.DA2]|0} Hz）→ 避开` :
+    (fly.smellA || fly.smellC) ? (fly.Umix <= -.3 ? "闻到学会讨厌的气味 → 躲开" : fly.Umix < .3 ? "闻到了，但蘑菇体说“无所谓”" : fly.hunger > .3 ? `闻到${fly.rC > fly.rA ? "苯乙醛" : "醋味"} → 逆风追` : "闻到了，但不饿，不追") : "没闻到（虚线 = “闻到”的门槛：果香 30 Hz，霉味 100 Hz）";
+  $("oKC").textContent = `Kenyon 细胞亮 ${((fly.kcA + fly.kcC) / MB.nkc_total * 100).toFixed(1)}%`;
+  const fmtU = u => (u >= 0 ? "+" : "") + u.toFixed(2);
+  $("mUA").textContent = fmtU(fly.UA); $("mUC").textContent = fmtU(fly.UC);
+  $("mUA").style.color = fly.UA <= -.3 ? "#57c9a8" : fly.UA < .3 ? "#8f889c" : "#ece6dc";
+  $("mUC").style.color = fly.UC <= -.3 ? "#57c9a8" : fly.UC < .3 ? "#8f889c" : "#ece6dc";
+  $("mCount").textContent = `惩罚 ${mbStats.pun} 次 · 奖励 ${mbStats.rew} 次`;
+  $("mKC").textContent = `此刻亮的 KC：醋 ${fly.kcA} · 苯乙醛 ${fly.kcC}`;
+  if (frameN % 6 === 2) drawMB();
+  $("oTrop").textContent = (fly.trop > 0 ? "+" : "") + fly.trop.toFixed(2);
+  $("dL").textContent = fly.dnL.toFixed(1); $("dR").textContent = fly.dnR.toFixed(1);
+  // 两根条以两者中较大的那个为满格 ⇒ 看得出谁高;真正决定转向的是差
+  const top = Math.max(fly.dnL, fly.dnR, 1);
+  $("dLb").style.width = (fly.dnL / top * 100) + "%"; $("dRb").style.width = (fly.dnR / top * 100) + "%";
+  const d = fly.dnL - fly.dnR, SPAN = 40, px = -Math.max(-1, Math.min(1, d / SPAN)) * 50;   // 左高 ⇒ 往左长
+  const bar = $("dDb"); bar.style.left = (px < 0 ? 50 + px : 50) + "%"; bar.style.width = Math.abs(px) + "%";
+  bar.style.background = d > 4 ? "#5fb8e8" : d < -4 ? "#ec7aa2" : "#8f889c";
+  $("dD").textContent = (d > 0 ? "+" : "") + d.toFixed(1);
+  // 帧率保险:连续 2 秒低于 40 帧就自动降一档速度
+  fpsN++; fpsT += dtF;
+  if (fpsT > 1){ const fps = fpsN / fpsT; fpsN = 0; fpsT = 0; slow = fps < 40 ? slow + 1 : 0;
+    const sel = $("spd"); if (slow >= 2 && sel.selectedIndex > 0){ sel.selectedIndex--; slow = 0; log(`手机有点吃力（${fps|0} 帧），自动降到 ${sel.value}×`); }
+    $("perf").textContent = `${fps|0} 帧/秒 · 指南针矩阵稀疏度 ${(SPARSE*100).toFixed(0)}%`; }
+  requestAnimationFrame(frame);
+}
+start(20260924); requestAnimationFrame(frame);
+</script>
+
+<script>
+/* 应用版专用:注册离线缓存;有新版本接管时在底部提示一下(主屏幕打开的应用没有刷新按钮) */
+if ("serviceWorker" in navigator) addEventListener("load", () => {
+  let had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!had){ had = true; return; }
+    const t = document.createElement("button"); t.textContent = "有新版本 · 点这里刷新";
+    t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:99;min-height:44px;padding:8px 16px;border-radius:999px;border:1px solid #ffb44a;background:#15131b;color:#ffb44a;font:inherit";
+    t.onclick = () => location.reload(); document.body.appendChild(t);
+  });
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+});
+</script>
+</body></html>

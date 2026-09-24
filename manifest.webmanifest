@@ -1,0 +1,32 @@
+{
+ "name": "果蝇探险",
+ "short_name": "果蝇探险",
+ "lang": "zh-CN",
+ "description": "用 FlyWire 接线图驱动的果蝇，在随机地图里自己找吃的。",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#0b0a0e",
+ "theme_color": "#0b0a0e",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
