@@ -1,6 +1,6 @@
 // 离线缓存:同源文件“先给缓存(秒开、断网也能开),同时去网上拿新的更新缓存”;Google 字体拿到一次就一直用缓存。
-// 125d03526f 由 build_explore.py 按内容哈希填,内容一变就是新缓存,旧的在 activate 时删掉。
-const CACHE = "fly-125d03526f", FONTS = "fonts-v1";
+// 83258038c7 由 build_explore.py 按内容哈希填,内容一变就是新缓存,旧的在 activate 时删掉。
+const CACHE = "fly-83258038c7", FONTS = "fonts-v1";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
               "./icon-maskable-512.png", "./apple-touch-icon.png", "./favicon-32.png"];
 // 装新版时绕过浏览器的 HTTP 缓存(GitHub Pages 会让文件缓存 10 分钟,不绕开的话新版缓存里可能装进旧文件)
