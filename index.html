@@ -109,7 +109,17 @@
   .tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
   .tag.brain{color:var(--brain);border-color:#5a4a1f}
   .tag.rule{color:var(--rule)}
-  .state{font-family:var(--serif);font-weight:900;font-size:22px}
+  .state{font-family:var(--serif);font-weight:900;font-size:22px;min-width:0}
+  .strow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .scores{display:flex;gap:12px;flex:none}
+  .sc{display:inline-flex;align-items:center;gap:5px} .sc b{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+  .sc i,.sctab th i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .sc1 b,.sctab .c1{color:#ece6dc} .sc1 i,.sctab .c1 i{background:#ece6dc}
+  .sc2 b,.sctab .c2{color:#8fd3ff} .sc2 i,.sctab .c2 i{background:#8fd3ff}
+  .sctab{width:100%;border-collapse:collapse;font-size:13px}
+  .sctab td,.sctab th{padding:3px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .sctab td:first-child,.sctab th:first-child{text-align:left;color:var(--muted)}
+  .sctab.no2 td:nth-child(3),.sctab.no2 th:nth-child(3){display:none}
   .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
   .stats span{display:grid;gap:0;min-width:0}
   .stats b{font-size:16px;font-weight:600;color:var(--text)}
@@ -118,8 +128,13 @@
   .meter i{display:block;height:100%;width:0;background:var(--sugar);transition:width .15s linear}
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
   .small{font-size:12.5px;color:var(--muted)}
-  .ebrow{display:grid;grid-template-columns:84px 1fr;gap:10px;align-items:center}
-  #eb{width:84px;height:84px}
+  .ebrow{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:center}
+  #eb{width:92px;height:92px}
+  .cmpS{display:grid;gap:2px;min-width:0}
+  .cmpBig{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .cmpBig .num{font-size:26px;font-weight:700;line-height:1.1}
+  .cmpBig em{font-style:normal;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card.open .ebrow{grid-template-columns:150px 1fr} .card.open #eb{width:150px;height:150px} .card.open .cmpS{display:none}
   .ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   button,input,select{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
   button{cursor:pointer}
@@ -208,19 +223,28 @@
     <div class="side">
       <section class="card" data-card="state">
         <button class="ch" aria-expanded="false"><span class="eyebrow">正在做</span><span class="tag rule" id="stTag">⚙ 规则</span></button>
-        <div class="state" id="state">探索</div>
-        <div class="stats" id="stats" aria-live="off">
-          <span><b class="num" id="sTime">0:00</b><em>地图时间</em></span><span><b class="num" id="sSugar">0</b><em>吃糖（份）</em></span>
-          <span><b class="num" id="sExp">0%</b><em>探索了地图</em></span><span><b class="num" id="sScore">0</b><em>积分</em></span>
+        <div class="strow">
+          <div class="state" id="state">探索</div>
+          <div class="scores" aria-label="积分">
+            <span class="sc sc1" title="一号（白）的积分"><i></i><b class="num" id="sc1">0</b></span>
+            <span class="sc sc2" id="sc2w" title="二号（蓝）的积分"><i></i><b class="num" id="sc2">0</b></span>
+          </div>
         </div>
         <div class="more">
           <div class="small" id="stWhy">沿着相对太阳的一个固定角度走直线</div>
-          <div class="stats more2">
-            <span><b class="num" id="sOdo">0 cm</b><em>走过的路</em></span><span><b class="num" id="sFed">0</b><em>进食次数</em></span>
-            <span><b class="num" id="sBad">0</b><em>尝到坏果子</em></span><span><b class="num" id="sScare">0 / 0</b><em>起飞 / 转身</em></span>
-            <span><b class="num" id="sChase">0 / 0</b><em>追它 / 被追</em></span>
-          </div>
-          <div class="small" id="s2" hidden></div>
+          <div class="row small"><span>地图时间</span><span class="num" id="sTime">0:00</span></div>
+          <table class="sctab" id="sctab">
+            <tr><th></th><th class="c1"><i></i>一号</th><th class="c2"><i></i>二号</th></tr>
+            <tr><td>积分</td><td class="num" id="sScore">0</td><td class="num" id="sScoreB">0</td></tr>
+            <tr><td>吃糖（份）</td><td class="num" id="sSugar">0</td><td class="num" id="sSugarB">0</td></tr>
+            <tr><td>探索了地图</td><td class="num" id="sExp">0%</td><td class="num" id="sExpB">0%</td></tr>
+            <tr><td>进食次数</td><td class="num" id="sFed">0</td><td class="num" id="sFedB">0</td></tr>
+            <tr><td>尝到坏果子</td><td class="num" id="sBad">0</td><td class="num" id="sBadB">0</td></tr>
+            <tr><td>走过的路</td><td class="num" id="sOdo">0 cm</td><td class="num" id="sOdoB">0 cm</td></tr>
+            <tr><td>起飞 / 转身</td><td class="num" id="sScare">0 / 0</td><td class="num" id="sScareB">0 / 0</td></tr>
+            <tr><td>追对方</td><td class="num" id="sChase">0</td><td class="num" id="sChaseB">0</td></tr>
+            <tr><td>凑过去</td><td class="num" id="sJoin">0</td><td class="num" id="sJoinB">0</td></tr>
+          </table>
           <div class="small">积分 = 吃下的糖（每份 10 分）+ 探索过的地图（每 1% 1 分）− 尝到坏果子（每次 3 分）。1 份糖 = 半格满糖。地图时间是模拟时间，跟着右上角 ⚙ 里的速度走。换地图会清零。</div>
         </div>
       </section>
@@ -300,6 +324,10 @@
         <button class="ch" aria-expanded="false"><span class="eyebrow">脑内指南针</span><span class="tag brain">🧠 接线图</span></button>
         <div class="ebrow">
           <canvas id="eb" width="220" height="220" aria-label="EPG 环"></canvas>
+          <div class="cmpS">
+            <div class="cmpBig"><span class="num" id="rErr2">0°</span><em>脑内估计和真实朝向差多少</em></div>
+            <div class="small" id="cmpLine">真实 0° · 以为 0°</div>
+          </div>
           <div class="more" style="gap:4px">
             <div class="row"><span class="small">真实朝向</span><span class="num" id="rH">0°</span></div>
             <div class="row"><span class="small">脑内估计</span><span class="num" id="rE">0°</span></div>
@@ -357,6 +385,7 @@
 <p><b>逃跑和倒退</b>：黑影是一个从上方落下的东西（点一下 = 快速拍下，按住 = 慢慢压）。每只眼按复眼数据数它挡住了多少个小眼（复眼图里画的就是这个），再算它的张角和张角增长速度：增长速度喂给 LC4，张角大小喂给 LPLC2（这种分工照 Ache 2019）。巨纤维超过 150 Hz ⇒ 起飞，身体朝向不变、往远离黑影的方向飞出 5~8 格，可以飞过墙（照 von Reyn 2014：巨纤维放电对应快速的短时起飞）；巨纤维没到、但 DNp02+DNp11 超过 80 Hz ⇒ 转身快跑，往下行神经元弱的那一侧转。撞墙时先倒退几步再转身：倒退由 MDN 驱动（Bidaye 2014，数据里有这 4 个神经元），但真实触发它的是腿上的触觉，在腹神经索里，这份数据只有脑，所以这一步是规则。</p>
 <p><b>第二只果蝇</b>（⚙ 设置里可以关）：蓝色那只有自己一整套——指南针环、转向、嗅觉、味觉、蘑菇体学习、逃跑回路都是自己的，只有地图（糖、气味、黑影）是两只共用的，所以它们会抢同一片糖。碰上对方算挡路（规则，和撞墙一样先退再转）。它们互相看得见：复眼图里另一只是一小团褐色，头那一小块偏红——约 10 mm 外只占七八个小眼，走到 3~4 mm 才有几十个；果蝇的眼睛就这么粗，认同伴靠的是“一小团会动的暗点”。另一只朝自己冲过来时，它在复眼里迅速变大，和黑影走的是同一条 LC4/LPLC2 → 巨纤维回路，所以有时会被吓得转身甚至起飞（两只一起跑 10 分钟，每只 0~3 次起飞、0~4 次转身）。看见之后要不要跟上去，见下一段。</p>
 <p><b>追着另一只</b>：吃饱了（饥饿 &lt; 0.45）、在闲逛或兜圈、看见另一只（LC10a 总驱动 &gt; 20 Hz、相距 2~12 格）时，平均一两秒内会跟上去。跟的时候“想去的方向”就设成当前朝向，让指南针那条路不拉偏，往左还是往右转全交给 LC10a → DNa02 的查表；远了追得快（最多 1.3 倍速），近了慢下来贴着看（约一个身长）。跟丢 1.2 秒、撞墙 3 次、追满 18 秒或饿了就放弃，之后 10~20 秒不再追。这些全是规则：LC10a 的输入按目标的张角（太小看不见、太大归逼近回路管）乘它在视网膜上动得多快来给；雄蝇里决定“想不想追”的是 P1 神经元的性唤起（Hindmarsh Sten 2021），而这份数据是雌蝇的脑，没有 P1，所以这道门是设的。被追的那只并没有专门的规则：追的那只贴近、或它自己回头迎上去时，对方在复眼里迅速变大，走的就是黑影那条逃跑回路，于是常常被吓得转身或起飞。</p>
+<p><b>凑过去</b>：⚙ 饿了（饥饿 &gt; 0.3）、正在逛或在找吃的、看得见另一只、而且它停着不动（看了半秒以上，多半是在吃），相距 2.2~10 格（约 4 mm~2 cm）时，大多在一秒内动身走过去；往左还是往右转照旧交给 LC10a → DNa02 查表，到了（中心相距约 1.8 格 = 3.6 mm）就先侧着走开一点、再绕着它脚下那块兜圈找，脚下有糖就吃。途中闻到醋味也不改道（它脚下那块糖本来就在散醋味）；闻到霉味或学来讨厌的气味照样会躲开。它看不见对方是不是在吃，只看得见“停着”。依据与出入：成年果蝇确实爱聚到别的果蝇正在用的食物上（Lihoreau 2016；Tinette 2004），但真实里主要靠气味（信息素、带着同伴气味的食物）；“看见就过去”最接近的实验是 Sun 2020——走动的果蝇会靠近被胶固定住的同伴（死的也一样），单靠视觉或单靠嗅觉都够，但那个实验里没有食物。所以这条规则是照这几篇写的简化，不是接线图或实验直接给出的；LC10a 已知的作用是雄蝇求偶追逐，借来用也是假设。实测：两只放在一起跑时它不常发生——平均每 10 分钟约 0.65 次：地图有 13 cm 见方、糖很分散，两只很少离得 2 cm 以内，而它的视力大概也就这么远。48 组配对（16 张地图 × 3 个随机种子，各 10 分钟，开和关从同一个起点出发）里，“吃东西时对方就在 4 格内”的时间比例从 5.6% 变成 6.8%，差 +1.2 个百分点，95% 区间 −0.8~+3.3，和 0 分不开。真遇上时它是管用的：专门摆一个场景（二号在 6 格外的一块糖上吃，一号饿着在逛），18 次里 10 次动身凑过去（另外几次是先闻到那块糖的醋味、直接逆风追过去了），8 次走到，其中 5 次一到就在那块糖上吃上了。想看它，可以用地图工具在两只之间放一块糖。</p>
 <p><b>靠眼睛躲墙</b>：以前只有撞上墙才退、才转。现在每只眼朝前方 10°~100° 打 7 条视线，墙越近、正对得越直，它在眼里扩张得越快——这个扩张率当成 LC4 的输入，墙在眼里的高度当成 LPLC2 的输入，再用黑影那张全脑模型查表读出同侧的 DNp02+DNp11；哪边的更强，就轻轻往另一边偏一点（不起飞、也不算“吓一跳”）。墙怎么变成这两个输入、偏多少是规则；而且真果蝇走路时靠哪些神经元躲墙还没有定论，借用逼近回路是个假设。8 张地图各跑 10 分钟：撞墙次数从 629 次降到 409 次，撞墙状态的时间从 8.1% 降到 5.1%，进食次数从 258 次变成 278 次。撞上以后先退再转的老规则照旧保留。</p>
 <p><b>cVA：同伴吃过的地方</b>：⚙ 果蝇进食时在那一格留下 cVA，挥发得慢，5 分钟左右淡掉一半，并随风往下风拖出一条越来越宽的尾巴（简化的高斯羽流，不算墙的遮挡）。另一只闻到后（只闻对方留的），在醋味此刻“想追”、又不是饿极了（饥饿 0.3~0.65）、正在找吃的时候，醋味“闻到”的门槛最多降一半，并往 DA1 投射神经元强的那一侧拐。依据与出入：cVA 单独几乎不吸引果蝇，它的作用是让食物气味更有吸引力（Bartelt 1985）；喂饱的处女雌蝇更喜欢 cVA+醋而不是只有醋，饿着的只认醋（Lebreton 2015）——可模拟里不饿的果蝇根本不去追醋味，所以 0.3~0.65 这个窗口是折中；Das 2017 在喂饱的处女雌蝇身上看到 cVA 与醋味的协同，机制是醋味经电突触增强 DA1 对 cVA 的反应，这份接线图表示不了电突触，所以“降门槛”只是对这个行为协同的粗略近似。⚠ 简化：真实里只有雄蝇会合成 cVA，交配过的雌蝇身上才带着，两只处女雌蝇其实留不下；这里两只都当作会留。实测：在这个模拟里测不出稳定的效果。48 组配对（16 张地图 × 3 个随机种子，各 10 分钟，开和关 cVA 从同一个起点出发），进食时间里花在“同伴吃过的那块糖”上的比例从 25.8% 变成 26.9%，差 +1.1 个百分点，95% 区间 −2.2~+4.6，和 0 分不开；cVA 真正起作用的时间平均每 10 分钟只有约 9 秒——两只果蝇很少正好走进对方留下的气味尾巴、又正好在追醋味。所以这一项现在主要是“看得见的机制”（地图上的小点、嗅觉卡片和大脑卡片里的 DA1），不是明显的行为变化。（之前写过“31.7% → 37.1%”，那是二号出生位置没用种子、两次运行起点不同造成的噪声，复审时发现，已更正。）</p>
 <p><b>复眼画面</b>：视觉卡片里的复眼图默认用 3D 场景渲染：在果蝇头上（离地 1 mm）朝 6 个方向各拍一张小图，再按 1,581 个小眼的真实方向取颜色，每个小眼取周围一小块的平均（约 5~9°，看落在小图的哪里）。墙、另一只果蝇、压下来的黑影都是真的挡在它眼前的样子。这只是画法：喂给指南针的 ER 神经元的亮度仍按原来的简化算法算，所以大脑的输入没变。复眼卡片不在屏幕上时不渲染；手机吃力时帧率保险会先把它换回示意画法；离线又没缓存过画图库时也用示意画法。</p>
@@ -387,6 +416,7 @@
 <li><b>应用图标</b>：用代码画的（两只复眼 + 指南针环），不含第三方图片。</li>
 <li><b>逃跑与倒退</b>：Ache et al. 2019（LC4 编码逼近速度、LPLC2 编码大小，汇到巨纤维）；von Reyn et al. 2014（巨纤维与起飞方式）；Bidaye et al. 2014（MDN 与倒退走）。</li>
 <li><b>盯住小目标（LC10a）</b>：Ribeiro et al. 2018（Cell，LC10a 与求偶追逐）；Hindmarsh Sten et al. 2021（Nature，性唤起开关视觉追逐）。</li>
+<li><b>聚到有同伴的食物上</b>：Lihoreau et al. 2016（J Exp Biol，食物斑块的集体选择）；Tinette et al. 2004（Genes Brain Behav）；Sun et al. 2020（Nat Commun，靠近不动的同伴，视觉或嗅觉都够）。</li>
 <li><b>cVA</b>：Bartelt et al. 1985（J Chem Ecol，聚集信息素）；Kurtovic et al. 2007（Nature，Or67d）；Lebreton et al. 2014、2015（Sci Rep，交配与饥饿对 cVA 吸引的调节）；Das et al. 2017（PNAS，cVA 与食物气味在 DA1 的协同）；Duménil et al. 2016（J Chem Ecol，交配雌蝇在产卵处留下 cVA）。</li>
 <li><b>蘑菇体学习</b>：Aso et al. 2014（隔室、DAN、MBON 图谱）；Aso &amp; Rubin 2016；Hige et al. 2015（多巴胺门控的突触压低）；Das et al. 2014（糖奖励与苦惩罚走蘑菇体）。</li>
 </ul>
@@ -944,7 +974,7 @@ function newFly(){
           cA: 0, cB: 0, rAL: 0, rAR: 0, rB: 0, pn: new Float64Array(NGL + 1), smellA: false, smellB: false, trop: 0,
           odor: null, surgeCool: 0, avoidCool: 0, egoUp: 0,
           cC: 0, rA: 0, rC: 0, rCL: 0, rCR: 0, smellC: false, pnC: cpnAt(0), UA: 1, UC: 1, Umix: 0, kcA: 0, kcC: 0,
-          flight: null, escCool: 0, tkCool: 0, fastT: 0, backT: 0, loomTh: 0, ls: null, chase: null, chaseCool: 5, chases: 0, lc: null, lcAz: null,
+          flight: null, escCool: 0, tkCool: 0, fastT: 0, backT: 0, loomTh: 0, ls: null, chase: null, chaseCool: 5, chases: 0, lc: null, lcAz: null, join: null, joinCool: 5, joins: 0, pStill: 0, pPrev: null,
           simT: 0, odo: 0, sugar: 0, badTastes: 0, takeoffs: 0, startles: 0, visited: new Uint8Array(G * G), visitedN: 0 };
   trail = []; X = new Float64Array(N); SUN_REF = sunAz; mbT = 0; mbHist = []; mbHistT = 0;
   for (let i = 0; i < 150; i++) ringStep(wrap(sunAz - fly.h), 1, 0);
@@ -969,7 +999,7 @@ function makeFly2(){
   fly.h = fly.goal = Rs() * 6.28 - 3.14; X = new Float64Array(N); for (let i = 0; i < 150; i++) ringStep(wrap(sunAz - fly.h), 1, 0);
   fly.peer = f1; f1.peer = fly; B2 = saveB(); loadB(b1);
 }
-function dropFly2(){ B2 = null; if (fly) fly.peer = null; }
+function dropFly2(){ B2 = null; if (fly){ fly.peer = null; fly.pStill = 0; fly.pPrev = null; if (fly.join || fly.chase){ fly.join = fly.chase = null; setState("explore"); } } }
 function log(s){ if (fly && fly.secondary) return; logs.unshift(s); logs = logs.slice(0, 30); document.getElementById("log").innerHTML = logs.map(x => `<div>${x}</div>`).join(""); }
 /* ─────────── 黑影逼近 → 逃跑 ───────────
    ⚙ 黑影 = 一个半径 LOOM_R 格的东西从上方落下(点一下 = 一巴掌快速拍下;按住 = 手慢慢压下来,松手抬起)。
@@ -1139,10 +1169,11 @@ const STATES = {
   cast:    ["横扫找味", "气味断了：垂直于风向左右扫，想把气味找回来", false],
   avoid:   ["避开气味", "闻到霉味（天生讨厌）就往下风走开；闻到学会讨厌的果香就斜着横穿出它的羽流。离源头很近时直接背对气味变浓的方向走", false],
   flee:    ["起飞逃跑", "黑影逼近 → 巨纤维（DNp01）放电 → 腿一蹬起飞，往远离黑影的方向飞开", "🧠 接线图 + ⚙ 动作"],
+  join:    ["凑过去", "看见另一只停着不动（多半在吃）→ 走过去，到了就在附近兜圈找吃的；往哪转由 LC10a → DNa02 决定，要不要去是规则", "🧠 接线图 + ⚙ 规则"],
   chase:   ["追着另一只", "LC10a 盯住视野里那个会动的小暗点 → 全脑模型查表得到两侧 DNa02 → 往它那边转；想不想追、追多快是规则", "🧠 接线图 + ⚙ 规则"],
   startle: ["吓了一跳", "黑影那一侧的下行神经元 DNp02/DNp11 放电，巨纤维还没到阈值 → 转身往反方向快跑", "🧠 接线图 + ⚙ 动作"],
 };
-function setState(s){ if (fly.state === s) return; if (s !== "chase" && s !== "wall") fly.chase = null; fly.state = s; fly.st = 0; let [n, why, brain] = STATES[s];
+function setState(s){ if (fly.state === s) return; if (s !== "chase" && s !== "wall") fly.chase = null; if (s !== "join" && s !== "wall" && fly.join){ fly.join = null; fly.joinCool = Math.max(fly.joinCool, 6); } fly.state = s; fly.st = 0; let [n, why, brain] = STATES[s];
   if (s === "surge" && fly.smellC && fly.rC > fly.rA) why = "闻到苯乙醛（坏果子的果香）：朝上风走——它还没学会讨厌这个味";
   document.getElementById("state").textContent = n; document.getElementById("stWhy").textContent = why;
   const tag = document.getElementById("stTag"); tag.textContent = typeof brain === "string" ? brain : brain ? "🧠 味觉查表" : "⚙ 规则"; tag.className = "tag " + (brain ? "brain" : "rule"); }
@@ -1158,7 +1189,7 @@ function flyStep(dt, R){
   fly.fullT = Math.max(0, fly.fullT - dt); fly.rejT = Math.max(0, fly.rejT - dt); fly.runT -= dt;
   fly.escCool = Math.max(0, fly.escCool - dt); fly.tkCool = Math.max(0, fly.tkCool - dt); fly.fastT = Math.max(0, fly.fastT - dt);
   if (fly.srch) fly.srch.el += dt;
-  const back = () => fly.chase ? "chase" : fly.odor ? fly.odor.mode : (fly.srch ? "search" : "explore");
+  const back = () => fly.chase ? "chase" : fly.join ? "join" : fly.odor ? fly.odor.mode : (fly.srch ? "search" : "explore");
 
   // 嗅觉:触角在头前 0.67 格;左右触角各一个读数(用梯度估计,见 plume.js 的说明)
   if (!fly.secondary){ PLUME.step(dt);
@@ -1200,13 +1231,35 @@ function flyStep(dt, R){
   const ws = wallSense(dt), cv = cvaSense(dt);
   fly.cvaOn = fly.smellA && fly.UA >= .3 && fly.hunger > .3 && fly.hunger < .65 && cv.pL + cv.pR > 2 &&
     ["explore", "search", "surge", "cast"].includes(fly.state);   // 醋味此刻“想追” + 不太饿 + 在找吃的 ⇒ cVA 才起作用
+  /* ⚙ 凑过去(社会觅食):果蝇确实爱聚到别的果蝇正在用的食物上(Lihoreau 2016;Tinette 2004),但真实里主要靠气味
+     (信息素、带着同伴气味的食物);“看见就过去”最接近的实验是 Sun 2020:走动的果蝇会靠近一只不动的果蝇(死的也一样),
+     单靠视觉就够,但那个实验里没有食物。⇒ 这里的规则是照着这几篇写的简化:饿了、在找吃的、看见另一只停着不动 ⇒ 有一定机会走过去;
+     到了就在附近兜圈找(脚下有糖就会吃)。往哪转仍交给 LC10a → DNa02 查表(LC10a 已知的作用是雄蝇求偶追逐,借来用是个假设)。 */
+  { const pr = fly.peer; fly.joinCool = Math.max(0, fly.joinCool - dt);
+    if (pr){ const v = fly.pPrev ? Math.hypot(pr.x - fly.pPrev[0], pr.y - fly.pPrev[1]) / dt : 9; fly.pPrev = [pr.x, pr.y];
+      fly.pStill = !pr.flight && v < .3 && lc.drive > 0 ? fly.pStill + dt : 0; } else fly.pStill = 0; }   // 看得见、而且它没动,才算“停着”
+  if (fly.join){
+    const j = fly.join; j.el += dt; j.lost = lc.drive > 5 ? 0 : j.lost + dt;
+    if (fly.state === "join") fly.goal = est;            // 往哪转全交给 LC10a → DNa02
+    const why = lc.d < 1.8 ? "到了" : j.lost > 1.2 ? "看不见它了" : fly.pStill < .01 && j.el > 1 ? "它走了" : (j.bumps || 0) > 2 ? "被墙挡住了" : j.el > 15 ? "太远，算了" : "";
+    if (why){ fly.join = null; fly.joinCool = why === "到了" ? 20 : 8 + 8 * R();
+      if (why === "到了"){ const pr = fly.peer; fly.food = { x: fly.px + (pr.x - fly.x), y: fly.py + (pr.y - fly.y) };   // 以为的食物位置 = 它脚下(路径积分坐标)
+        fly.srch = { out: true, len: 1.2, loops: 0, ox: fly.px, oy: fly.py, el: 0, best: 1e9, bestT: 0 };
+        fly.goal = wrap(est + (R() < .5 ? 1 : -1) * (Math.PI / 2 + R() * Math.PI / 2)); }   // 先侧着/背着走开一点再绕回来,别一头撞上它
+      if (fly.state === "join") setState(why === "到了" ? "search" : fly.odor ? fly.odor.mode : fly.srch ? "search" : "explore");
+      log(why === "到了" ? `凑到另一只旁边了（走了 ${j.el.toFixed(1)} 秒），在附近兜圈找吃的` : `不凑过去了：${why}`); }
+  } else if ((fly.state === "explore" || fly.state === "search" || fly.state === "cast") && fly.hunger > .3 && fly.joinCool <= 0 && fly.pStill > .5 &&
+             lc.drive > LC10_TH && lc.d > 2.2 && lc.d < 10 && R() < dt * 1.5){   // 对方一顿只吃几秒 ⇒ 看见了就大多在一秒内动身
+    fly.join = { el: 0, lost: 0 }; fly.srch = null; fly.odor = null; fly.joins++; setState("join");
+    log(`<b>看见另一只停在那儿</b>（多半在吃）：LC10a 左 ${lc.L|0} / 右 ${lc.R|0} Hz → 凑过去`);
+  }
   if (fly.chase){
     const c = fly.chase; c.el += dt; c.lost = lc.drive > 5 ? 0 : c.lost + dt;
     if (fly.state === "chase") fly.goal = est;           // 让指南针那条路不拉偏:往哪转全交给 LC10a → DNa02
     const why = c.lost > 1.2 ? "跟丢了" : (c.bumps || 0) > 2 ? "被墙挡住了" : c.el > 18 ? "没兴趣了" : fly.hunger > .6 ? "饿了，不追了" : "";
     if (why){ fly.chase = null; fly.chaseCool = 10 + 10 * R(); fly.runT = 3; if (fly.state === "chase") setState(fly.odor ? fly.odor.mode : fly.srch ? "search" : "explore");
       log(`${why}（追了 ${c.el.toFixed(1)} 秒）`); }
-  } else if ((fly.state === "explore" || fly.state === "search") && fly.hunger < .45 && fly.chaseCool <= 0 && lc.drive > LC10_TH && lc.d > 2 && lc.d < 12 && R() < dt * .8){
+  } else if (!fly.join && (fly.state === "explore" || fly.state === "search") && fly.hunger < .45 && fly.chaseCool <= 0 && lc.drive > LC10_TH && lc.d > 2 && lc.d < 12 && R() < dt * .8){
     fly.chase = { el: 0, lost: 0 }; fly.srch = null; fly.chases++; setState("chase");
     log(`<b>看见另一只</b>：LC10a 左 ${lc.L|0} / 右 ${lc.R|0} Hz → 跟上去（DNa02 ${lc.dnL|0} / ${lc.dnR|0} Hz）`);
   }
@@ -1264,7 +1317,7 @@ function flyStep(dt, R){
       // 🧠+⚙ 学会的回避:这股气味的 U 已被蘑菇体压到 −0.3 以下
       fly.odor = { mode: "avoid", el: 0, quiet: 0, dev: (R() - .5) * 1.2, wallSide: R() < .5 ? 1 : -1, learned: true }; fly.srch = null;
       setState("avoid"); log(`<b>学会了讨厌</b>：闻到${fly.rC > fly.rA ? "苯乙醛（坏果子）" : "醋味"}，蘑菇体读数 U = ${fly.Umix.toFixed(2)} → 横着走出这股气味`);
-    } else if (fly.Umix >= .3 && !fly.smellB && fly.hunger > .3 && fly.surgeCool <= 0 && fly.fullT <= 0 && (!fly.odor || fly.odor.mode === "cast")){
+    } else if (fly.Umix >= .3 && !fly.smellB && fly.hunger > .3 && fly.surgeCool <= 0 && fly.fullT <= 0 && (!fly.odor || fly.odor.mode === "cast") && fly.state !== "join"){
       const fresh = !fly.odor;
       const ua = PLUME.wind().angle + Math.PI, up0 = fly.x * Math.cos(ua) + fly.y * Math.sin(ua);
       const pk = fly.odor && fly.odor.peak ? fly.odor : { peak: fly.cA, ppx: fly.px, ppy: fly.py };
@@ -1343,7 +1396,7 @@ function flyStep(dt, R){
 
   // ③ 转向:目标只以“FC2 上的一个峰”进入大脑;往哪转由 PFL3→DNa02 决定,不是规则
   //   目标在 EPG 坐标里 = SUN_REF − goal(与 est = SUN_REF − 峰 同一套换算)
-  if (!feeding){ const sgn = steer(wrap(SUN_REF - fly.goal), (R() - .5) * 6 + fly.trop + (fly.state === "chase" ? lc.bias : 0) + (fly.state === "wall" ? 0 : ws.bias) + (fly.cvaOn ? CVA_TROP * (cv.pL - cv.pR) : 0)); fly.turn = sgn.turn; fly.dnL = sgn.dnL; fly.dnR = sgn.dnR; }
+  if (!feeding){ const sgn = steer(wrap(SUN_REF - fly.goal), (R() - .5) * 6 + fly.trop + (fly.state === "chase" || fly.state === "join" ? lc.bias : 0) + (fly.state === "wall" ? 0 : ws.bias) + (fly.cvaOn ? CVA_TROP * (cv.pL - cv.pR) : 0)); fly.turn = sgn.turn; fly.dnL = sgn.dnL; fly.dnR = sgn.dnR; }
   else { fly.turn = 0; fly.dnL = fly.dnR = 0; }
   fly.h = wrap(fly.h + fly.turn * TURN * dt);
   ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, fly.turn);
@@ -1359,7 +1412,8 @@ function flyStep(dt, R){
     } else if (isWall(nx, ny) || (fly.peer && !fly.peer.flight && Math.hypot(nx - fly.peer.x, ny - fly.peer.y) < 1 &&
                Math.hypot(nx - fly.peer.x, ny - fly.peer.y) < Math.hypot(fly.x - fly.peer.x, fly.y - fly.peer.y))){   // ⚙ 撞上另一只果蝇也算挡路
       if (fly.state !== "wall"){ fly.backT = .4; fly.wallHits = (fly.wallHits || 0) + 1; }   // 刚撞上:先退 0.4 秒
-      if (fly.state !== "wall" && fly.chase) fly.chase.bumps = (fly.chase.bumps || 0) + 1;   // 追着追着撞墙:撞 3 次就算了
+      if (fly.state !== "wall" && fly.chase) fly.chase.bumps = (fly.chase.bumps || 0) + 1;
+      if (fly.state !== "wall" && fly.join) fly.join.bumps = (fly.join.bumps || 0) + 1;   // 追着追着撞墙:撞 3 次就算了
       // ⚙ 只在“刚撞上”或“上一次转身已经转完还是墙”时换目标 —— 每拍都换的话电路还没转过去目标就又变了
       if (fly.state !== "wall" || fly.turn === 0){
         setState("wall");
@@ -1605,7 +1659,7 @@ function place3(o, f, trail){
   o.g.position.set(x, .23 + 3 * fl, z); o.g.rotation.y = f.h; o.g.scale.setScalar(1 + .35 * fl);   // 起飞:抬高、放大一点
   const wa = .4 + 1.0 * fl; o.wl.rotation.y = Math.PI - wa; o.wr.rotation.y = Math.PI + wa;          // 翅膀:平时收在背上,飞起来张开
   o.sh.position.x = x; o.sh.position.z = z; o.sh.material.opacity = .35 - .15 * fl;
-  o.line.visible = f.state === "chase" && !!f.peer;
+  o.line.visible = (f.state === "chase" || f.state === "join") && !!f.peer;
   if (o.line.visible){ const [px, pz] = w2t(f.peer.x, f.peer.y), a = o.line.geometry.attributes.position;
     a.setXYZ(0, x, .25, z); a.setXYZ(1, px, .25, pz); a.needsUpdate = true; }
   if (frameN % 4 === 0){ const a = o.trail.geometry.attributes.position, n = Math.min(trail.length, 1600);
@@ -1673,6 +1727,7 @@ function eyeInit3D(){
 }
 function eyeRender(){                                            // → 每个小眼一个 [r,g,b]
   if (!V3.ecams) eyeInit3D();
+  if (V3.r.getContext().isContextLost()) throw new Error("webgl context lost");   // 切到后台时手机可能收回 WebGL:这一帧退回示意画法
   if (!V3.on) sync3D();
   const r = V3.r, f = fly, [x, z] = w2t(f.x + Math.cos(f.h) * .62, f.y + Math.sin(f.h) * .62), ey = EYE_Z;
   const hide = [V3.fl[0].g, V3.fl[0].sh, V3.fl[0].line, V3.fl[0].trail, V3.fl[1].line, V3.fl[1].trail, V3.od], was = hide.map(o => o.visible);
@@ -1813,7 +1868,7 @@ function drawEye(est){
     eyeCx.fillText(label, X, y); };
   if (fly.state !== "feed") mark(wrap(fly.goal - est), "#f9c54a", "想去", 15);
   mark(fly.egoUp, "#8fd3ff", "上风", 31);
-  if (fly.lc && fly.lc.drive > 0) mark(fly.lc.az, "#c9b3ff", fly.state === "chase" ? "盯着它" : "另一只", 47);
+  if (fly.lc && fly.lc.drive > 0) mark(fly.lc.az, "#c9b3ff", fly.state === "chase" ? "盯着它" : fly.state === "join" ? "凑过去" : "另一只", 47);
   // ER:眼平面(仰角 15°)上 36 个 10° 方位箱的亮度 → 感受野加权
   const pano = Array.from({length:36}, (_, i) => viewAt((-175 + i*10) * Math.PI / 180, .26, rays)[1]);
   const n = VZ.rf.length, cw = erCv.width / n;
@@ -1859,7 +1914,7 @@ function draw(b, est){
     cx.globalAlpha = sunOn ? 1 : .25; cx.fillStyle = "#ffb44a"; cx.beginPath(); cx.arc(ax, ay, 10 * u, 0, 7); cx.fill(); cx.globalAlpha = 1; }
   if (!sunOn){ cx.fillStyle = "rgba(5,4,10,.35)"; cx.fillRect(0, 0, W, H); }
   cx.setTransform(k, 0, 0, k, W / 2 - k * cam.mx, H / 2 - k * cam.my);
-  for (const f of B2 ? [fly, B2.fly] : [fly]) if (f.state === "chase" && f.peer){      // 谁在追谁:细虚线
+  for (const f of B2 ? [fly, B2.fly] : [fly]) if ((f.state === "chase" || f.state === "join") && f.peer){      // 谁在追谁:细虚线
     cx.strokeStyle = f === fly ? "rgba(236,230,220,.55)" : "rgba(143,211,255,.6)"; cx.setLineDash([2, 5]); cx.lineWidth = 1.5;
     cx.beginPath(); cx.moveTo(sx(f.x), sy(f.y)); cx.lineTo(sx(f.peer.x), sy(f.peer.y)); cx.stroke(); cx.setLineDash([]); }
   if (B2) drawFly(B2.fly, "#8fd3ff", "#3d7fb0");
@@ -2046,8 +2101,12 @@ fly2UI();
   const setCtl = () => { const c = [$("map"), $("map3d")].find(x => x && !x.hidden); if (!mbox || !c || !c.getBoundingClientRect) return;
     root.style.setProperty("--ctlH", Math.max(0, mbox.getBoundingClientRect().bottom - c.getBoundingClientRect().bottom - 6) + "px"); };
   setCtl(); addEventListener("resize", setCtl); if (typeof ResizeObserver !== "undefined" && mbox) new ResizeObserver(setCtl).observe(mbox);
-  { let lastY = globalThis.scrollY || 0, acc = 0;                 // 往下滚 ⇒ 收起;往上滚 ⇒ 展开;回到顶部附近一定展开
+  { let lastY = globalThis.scrollY || 0, acc = 0, userT = -1e9;   // 往下滚 ⇒ 收起;往上滚 ⇒ 展开;回到顶部附近一定展开
+    // 只认“人在滚”:手指/滚轮/键盘之后 1.2 秒内的滚动(含松手后的惯性)。卡片里的字变长变短时,浏览器会自己挪滚动位置
+    //   (滚动锚定、页面变短时贴底),那种滚动不是人滚的 —— 以前把它也当成上滑/下滑,顶栏和按钮就跟着一缩一放
+    for (const t of ["touchstart", "touchmove", "touchend", "wheel", "keydown", "pointerdown"]) addEventListener(t, () => { userT = performance.now(); }, { passive: true, capture: true });
     addEventListener("scroll", () => { const y = scrollY, dy = y - lastY; lastY = y;
+      if (performance.now() - userT > 1200){ acc = 0; if (y < 40) root.classList.remove("compact"); return; }
       acc = Math.sign(dy) === Math.sign(acc) ? acc + dy : dy;
       const cl = root.classList, want = y < 40 ? false : acc > 14 ? true : acc < -14 ? false : cl.contains("compact");
       if (want && !panel.hidden) return;                           // 设置面板开着时不收
@@ -2110,24 +2169,25 @@ function frame(now){
   lastOut = out; draw(out.b, out.est);
   $("rH").textContent = deg(fly.h) + "°"; $("rE").textContent = deg(out.est) + "°";
   const e = Math.abs(deg(wrap(out.est - fly.h))); $("rErr").textContent = e + "°"; $("rErr").style.color = e < 15 ? "#7fd6a4" : "#ffb44a";
+  $("rErr2").textContent = e + "°"; $("rErr2").style.color = e < 15 ? "#7fd6a4" : "#ffb44a";
+  $("cmpLine").textContent = `真实 ${deg(fly.h)}° · 以为 ${deg(out.est)}° · ${sunOn ? "看得到太阳，一直在校准" : "关灯了，只靠记忆"}`;
   $("rPos").textContent = (Math.hypot(fly.px - fly.x, fly.py - fly.y) * 2).toFixed(1) + " mm";
   if (frameN % 8 === 0 || paused){
     const t = fly.simT | 0, two = n => String(n).padStart(2, "0");
     $("sTime").textContent = t >= 3600 ? `${t / 3600 | 0}:${two((t % 3600) / 60 | 0)}:${two(t % 60)}` : `${t / 60 | 0}:${two(t % 60)}`;
-    const exp = Math.min(100, fly.visitedN / openTiles * 100), sug = fly.sugar / 100;
-    $("sSugar").textContent = sug.toFixed(1); $("sExp").textContent = exp.toFixed(0) + "%";
-    $("sScore").textContent = Math.max(0, Math.round(sug * 10 + exp - fly.badTastes * 3));
-    const mm = fly.odo * 2; $("sOdo").textContent = mm < 1000 ? (mm / 10).toFixed(0) + " cm" : (mm / 1000).toFixed(2) + " m";
-    $("sFed").textContent = fly.fed; $("sBad").textContent = fly.badTastes; $("sScare").textContent = `${fly.takeoffs} / ${fly.startles}`;
-    $("sChase").textContent = B2 ? `${fly.chases} / ${B2.fly.chases}` : "—";
+    const st = f => { const exp = Math.min(100, f.visitedN / openTiles * 100), sug = f.sugar / 100, mm = f.odo * 2;
+      return { score: Math.max(0, Math.round(sug * 10 + exp - f.badTastes * 3)), sug: sug.toFixed(1), exp: exp.toFixed(0) + "%", fed: f.fed, bad: f.badTastes,
+        odo: mm < 1000 ? (mm / 10).toFixed(0) + " cm" : (mm / 1000).toFixed(2) + " m", scare: `${f.takeoffs} / ${f.startles}`, chase: f.chases, join: f.joins }; };
+    const A = st(fly), Bs = B2 ? st(B2.fly) : null;
+    $("sc1").textContent = A.score; $("sc2w").hidden = !Bs; if (Bs) $("sc2").textContent = Bs.score;
+    $("sctab").classList.toggle("no2", !Bs);
+    for (const [k, id] of [["score", "sScore"], ["sug", "sSugar"], ["exp", "sExp"], ["fed", "sFed"], ["bad", "sBad"], ["odo", "sOdo"], ["scare", "sScare"], ["chase", "sChase"], ["join", "sJoin"]]){
+      $(id).textContent = A[k]; if (Bs) $(id + "B").textContent = Bs[k]; }
     const ls = fly.ls || { gfL: 0, gfR: 0, dL: 0, dR: 0 };
     $("gfLR").textContent = `${ls.gfL | 0} / ${ls.gfR | 0} Hz`; $("gfB").style.width = Math.min(100, Math.max(ls.gfL, ls.gfR) / 3) + "%";
     $("dnLR").textContent = `${ls.dL | 0} / ${ls.dR | 0} Hz`;
     const wsv = fly.ws || { dL: 0, dR: 0 }; $("wsLR").textContent = `${wsv.dL | 0} / ${wsv.dR | 0} Hz`;
     const lcv = fly.lc || { L: 0, R: 0, dnL: 0, dnR: 0 }; $("lcLR").textContent = `${lcv.L | 0} / ${lcv.R | 0} Hz`; $("lcDN").textContent = `${lcv.dnL | 0} / ${lcv.dnR | 0} Hz`;
-    const s2 = $("s2"); s2.hidden = !B2;
-    if (B2){ const f2 = B2.fly, e2 = Math.min(100, f2.visitedN / openTiles * 100), g2 = f2.sugar / 100;
-      s2.textContent = `蓝色二号：吃糖 ${g2.toFixed(1)} 份 · 探索 ${e2.toFixed(0)}% · 积分 ${Math.max(0, Math.round(g2 * 10 + e2 - f2.badTastes * 3))} · 起飞 / 转身 ${f2.takeoffs} / ${f2.startles} · 追一号 ${f2.chases} 次`; }
   }
   $("tS").textContent = fly.s | 0; $("tB").textContent = fly.b | 0; $("tR").textContent = Math.round(fly.rate) + " Hz";
   $("tBar").style.width = Math.min(100, fly.rate / 3) + "%"; $("hBar").style.width = (fly.hunger * 100) + "%";
