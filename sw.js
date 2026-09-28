@@ -1,6 +1,6 @@
 // 离线缓存:同源文件“先给缓存(秒开、断网也能开),同时去网上拿新的更新缓存”;Google 字体拿到一次就一直用缓存。
-// 0ddaed5cbf 由 build_explore.py 按内容哈希填,内容一变就是新缓存,旧的在 activate 时删掉。
-const CACHE = "fly-0ddaed5cbf", FONTS = "fonts-v1", LIBS = "libs-v1";
+// 0c99c020ef 由 build_explore.py 按内容哈希填,内容一变就是新缓存,旧的在 activate 时删掉。
+const CACHE = "fly-0c99c020ef", FONTS = "fonts-v1", LIBS = "libs-v1";
 // 3D 画面用的 three.js(cdnjs,网址里钉死了版本 ⇒ 内容永远不变,缓存一次就一直用)。装 App 时顺手存一份,失败也不影响安装
 const THREE_URL = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
