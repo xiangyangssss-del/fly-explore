@@ -155,7 +155,7 @@
       <div class="sg"><div class="eyebrow">地图</div>
         <div class="ctrl"><input id="seed" inputmode="numeric" aria-label="地图种子" value="20260924"><button id="bNew">生成地图</button><button id="bRand">随机种子</button></div></div>
       <div class="sg"><div class="eyebrow">运行 · 太阳 · 学习</div>
-        <div class="ctrl"><button id="bPause">暂停</button><select id="spd" aria-label="速度"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select><button id="bSun" aria-pressed="true">☀ 太阳：开</button><button id="bLearn" aria-pressed="true">学习：开</button><button id="bForget">清空记忆</button></div></div>
+        <div class="ctrl"><button id="bPause">暂停</button><select id="spd" aria-label="速度"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select><button id="bSun" aria-pressed="true">☀ 太阳：开</button><button id="bLearn" aria-pressed="true">学习：开</button><button id="bForget">清空记忆</button><button id="bFly2" aria-pressed="true">第二只果蝇：开</button></div></div>
       <div class="sliders">
         <label for="sunAz">太阳方位 <input id="sunAz" type="range" min="-180" max="180" value="60"></label>
         <label for="windAz">风向（空气往哪吹） <input id="windAz" type="range" min="-180" max="180" value="-90"></label></div>
@@ -202,6 +202,7 @@
             <span><b class="num" id="sOdo">0 cm</b><em>走过的路</em></span><span><b class="num" id="sFed">0</b><em>进食次数</em></span>
             <span><b class="num" id="sBad">0</b><em>尝到坏果子</em></span><span><b class="num" id="sScare">0 / 0</b><em>起飞 / 转身</em></span>
           </div>
+          <div class="small" id="s2" hidden></div>
           <div class="small">积分 = 吃下的糖（每份 10 分）+ 探索过的地图（每 1% 1 分）− 尝到坏果子（每次 3 分）。1 份糖 = 半格满糖。地图时间是模拟时间，跟着右上角 ⚙ 里的速度走。换地图会清零。</div>
         </div>
       </section>
@@ -316,6 +317,7 @@
 <p><b>行为</b>（按果蝇行为学论文写，不是从接线图算的）：隔几秒换一个想去的方向、撞墙时换目标、吃完后来回折返的局部搜索、转身时放慢、饥饿。饥饿靠激素和神经调质，接线图里没有；走路的电路在腹神经索，这份数据也不含。</p>
 <p><b>气味</b>：饿着闻到“想追”的气味 → 朝上风走；气味断了 → 垂直风向左右扫、越扫越宽；闻到霉味 → 走开，而且不进食、正在吃也停下（Álvarez-Salvado 2018；Stensmyr 2012）。躲的时候（天生怕霉味和学来的躲避都一样），离源头很近就背着气味变浓的方向走；远处的话，霉味往下风走，学来的躲避斜着横穿出羽流——苯乙醛的羽流顺风拖得很长，往下风走等于一直在里面。接线图里找得到“风感受器 → 中央复合体”的通路，但决定不了它指向逆风还是顺风，所以方向是规则。目标仍然交给 FC2 → PFL3 → DNa02 去转。</p>
 <p><b>逃跑和倒退</b>：黑影是一个从上方落下的东西（点一下 = 快速拍下，按住 = 慢慢压）。每只眼按复眼数据数它挡住了多少个小眼（复眼图里画的就是这个），再算它的张角和张角增长速度：增长速度喂给 LC4，张角大小喂给 LPLC2（这种分工照 Ache 2019）。巨纤维超过 150 Hz ⇒ 起飞，身体朝向不变、往远离黑影的方向飞出 5~8 格，可以飞过墙（照 von Reyn 2014：巨纤维放电对应快速的短时起飞）；巨纤维没到、但 DNp02+DNp11 超过 80 Hz ⇒ 转身快跑，往下行神经元弱的那一侧转。撞墙时先倒退几步再转身：倒退由 MDN 驱动（Bidaye 2014，数据里有这 4 个神经元），但真实触发它的是腿上的触觉，在腹神经索里，这份数据只有脑，所以这一步是规则。</p>
+<p><b>第二只果蝇</b>（⚙ 设置里可以关）：蓝色那只有自己一整套——指南针环、转向、嗅觉、味觉、蘑菇体学习、逃跑回路都是自己的，只有地图（糖、气味、黑影）是两只共用的，所以它们会抢同一片糖。碰上对方算挡路（规则，和撞墙一样先退再转）。它们互相看得见：复眼图里另一只是一小团褐色，头那一小块偏红——约 10 mm 外只占七八个小眼，走到 3~4 mm 才有几十个；果蝇的眼睛就这么粗，认同伴靠的是“一小团会动的暗点”。另一只朝自己冲过来时，它在复眼里迅速变大，和黑影走的是同一条 LC4/LPLC2 → 巨纤维回路，所以有时会被吓得转身甚至起飞（两只一起跑 10 分钟，每只 0~3 次起飞、0~4 次转身）。真果蝇追踪移动小目标还有一类专门的 LC10 神经元（数据里 818 个），这里没接。</p>
 <p><b>学习</b>：尝到苦 → 惩罚型多巴胺神经元（PPL1）→ 把最近 6 秒内亮过的 KC 到“趋近”MBON 的突触按比例压低；吃到糖 → 奖励型（PAM）→ 压低到“回避”MBON 的突触，强度随饥饿（Hige 2015；Aso &amp; Rubin 2016）。之后突触慢慢恢复：γ 隔室约 10 分钟、α2 和 β1 约 30 分钟；α1、α3 设成不恢复（当作长期记忆，这是推断），所以学得多了 U 回不到 +1，会停在 +0.6 左右——仍在“追”的范围里。读数 U = 天生的吸引（+1）＋ 2 × 学到的偏好：U ≥ 0.3 追，U ≤ −0.3 躲，中间不理。读数固定用 100 Hz 那一档的 KC（这种气味的“身份”），不随浓度换组。全脑模型里糖/苦味觉神经元点不亮多巴胺神经元，所以“味觉 → 多巴胺”这一步是规则。</p>
 
 <h3>实测效果</h3>
@@ -779,7 +781,7 @@ const MBN = MB.kc_class.length, LV = MB.odors.vinegar.levels;
 const KCSET = { A: MB.odors.vinegar.active.map(a => Int32Array.from(a)), C: MB.odors.C.active.map(a => Int32Array.from(a)) };
 const MBW0 = MB.comps.map(c => Float64Array.from(c.w0));
 let MBS = MB.comps.map(() => new Float64Array(MBN).fill(1));      // s = w / w0(1 = 没学过)
-const lastKC = new Float64Array(MBN).fill(-1e9);
+let lastKC = new Float64Array(MBN).fill(-1e9);
 let mbT = 0, mbAcc = 0, mbLearn = true, mbStats = { pun: 0, rew: 0 }, mbHist = [], mbHistT = 0;
 // 取最接近的一档(第 0 档要真到 30 Hz):取“不超过的最高一档”的话,96 Hz 会落到 60 那档,苯乙醛只亮 4 个 KC 而不是 39 个
 function lvIdx(r){ let i = r >= LV[0] ? 0 : -1; for (let j = 1; j < LV.length; j++) if (r >= (LV[j-1] + LV[j]) / 2) i = j; return i; }
@@ -902,7 +904,27 @@ function newFly(){
   for (let i = 0; i < 150; i++) ringStep(wrap(sunAz - fly.h), 1, 0);
   logs = []; log(`地图 #${world.seed} 生成。果蝇在中间醒来。`);
 }
-function log(s){ logs.unshift(s); logs = logs.slice(0, 30); document.getElementById("log").innerHTML = logs.map(x => `<div>${x}</div>`).join(""); }
+/* ─────────── 第二只果蝇 ───────────
+   每只果蝇有自己的一整套:指南针环 X、蘑菇体突触 MBS/lastKC、足迹、太阳参照。地图(糖、气味羽流、黑影)是共用的。
+   做法:两套状态轮流装进同一组全局变量,flyStep 原样跑两次。界面卡片只显示一号(fly 平时总是一号)。 */
+let FLY2 = true, B2 = null;
+try { FLY2 = localStorage.getItem("fly2") !== "0"; } catch (e) {}
+const saveB = () => ({ fly, X, trail, SUN_REF, MBS, lastKC, mbT, mbAcc, mbStats, mbHist, mbHistT });
+const loadB = b => { ({ fly, X, trail, SUN_REF, MBS, lastKC, mbT, mbAcc, mbStats, mbHist, mbHistT } = b); };
+function withFly2(fn){ const b1 = saveB(); loadB(B2); try { return fn(); } finally { B2 = saveB(); loadB(b1); } }
+function makeFly2(){
+  const b1 = saveB(), f1 = fly;
+  MBS = MB.comps.map(() => new Float64Array(MBN).fill(1)); lastKC = new Float64Array(MBN).fill(-1e9); mbStats = { pun: 0, rew: 0 }; mbAcc = 0;
+  const L = logs; newFly(); logs = L; fly.secondary = true;
+  let best = null, bd = -1;                        // 出生在离一号 8~20 格、能走到的空地上
+  for (let t = 0; t < 400; t++){ const x = 2 + (G - 4) * Math.random(), y = 2 + (G - 4) * Math.random(), d = Math.hypot(x - f1.x, y - f1.y);
+    if (isWall(x, y) || d < 8) continue; const sc = d > 20 ? 40 - d : d; if (sc > bd){ bd = sc; best = [x, y]; } }
+  if (best){ fly.x = fly.px = best[0]; fly.y = fly.py = best[1]; }
+  fly.h = fly.goal = Math.random() * 6.28 - 3.14; X = new Float64Array(N); for (let i = 0; i < 150; i++) ringStep(wrap(sunAz - fly.h), 1, 0);
+  fly.peer = f1; f1.peer = fly; B2 = saveB(); loadB(b1);
+}
+function dropFly2(){ B2 = null; if (fly) fly.peer = null; }
+function log(s){ if (fly && fly.secondary) return; logs.unshift(s); logs = logs.slice(0, 30); document.getElementById("log").innerHTML = logs.map(x => `<div>${x}</div>`).join(""); }
 /* ─────────── 黑影逼近 → 逃跑 ───────────
    ⚙ 黑影 = 一个半径 LOOM_R 格的东西从上方落下(点一下 = 一巴掌快速拍下;按住 = 手慢慢压下来,松手抬起)。
    ⚙ 视觉编码:每只眼看它的张角 θ 和张角增长速度 θ̇;LC4 ∝ θ̇(逼近得多快),LPLC2 ∝ θ(多大,且要在变大)。
@@ -931,36 +953,41 @@ function lookup2(tab, a, b){                             // 非等距网格上�
   const [i, fa] = ix(a), [j, fb] = ix(b);
   return (tab[i][j] * (1 - fb) + tab[i][j + 1] * fb) * (1 - fa) + (tab[i + 1][j] * (1 - fb) + tab[i + 1][j + 1] * fb) * fa;
 }
-function loomSense(dt){
-  const o = { gfL: 0, gfR: 0, dL: 0, dR: 0, lc4L: 0, lc4R: 0, lpL: 0, lpR: 0, th: 0 };
-  if (!loom){ fly.loomTh = 0; return o; }
-  const dx = loom.x - fly.x, dy = loom.y - fly.y, d = Math.hypot(dx, dy), dz = loom.z - EYE_Z;
-  const th = 2 * Math.atan(LOOM_R / Math.hypot(d, dz)), thd = fly.loomTh > 0 ? (th - fly.loomTh) / dt : 0;
-  fly.loomTh = th; o.th = th;
-  // 看不看得见,直接用复眼数据:数黑影挡住了左眼、右眼各多少个小眼(和复眼图里画出来的是同一个判断)。
-  //   挡住 15 个以上算“看全了”,越少输入越弱;一个都没挡住就没有输入 —— 头顶 74° 以上、正后方 ±33° 都是这份数据里的盲区
-  const az = wrap(Math.atan2(dy, dx) - fly.h), el = Math.atan2(dz, d), ce = Math.cos(el);
+function objView(ox, oy, oz, R){                        // 一个物体在两只复眼里:张角、挡住多少个小眼(和复眼图同一个判断)
+  const dx = ox - fly.x, dy = oy - fly.y, d = Math.hypot(dx, dy), dz = oz - EYE_Z;
+  const th = 2 * Math.atan(R / Math.hypot(d, dz)), az = wrap(Math.atan2(dy, dx) - fly.h), el = Math.atan2(dz, d), ce = Math.cos(el);
   const fx = ce * Math.cos(az), fy = ce * Math.sin(az), fz = Math.sin(el), ch = Math.cos(th / 2);
   let covL = 0, covR = 0;
   for (const v of OMV) if (v[0] * fx + v[1] * fy + v[2] * fz > ch){ if (v[3]) covL++; else covR++; }
-  const wL = Math.min(1, covL / 15), wR = Math.min(1, covR / 15);
-  o.fy = fy; o.covL = covL; o.covR = covR;
-  const lc4a = 80 * Math.max(0, Math.min(1, thd / 6));
-  const lpa = 80 * Math.max(0, Math.min(1, (th - .35) / 1.25)) * (thd > .3 ? 1 : .2);
+  return { th, fy, covL, covR };
+}
+function loomSense(dt){
+  // 逼近物体:黑影(手,半径 LOOM_R、从上方落下)和另一只果蝇(半个身长 0.6 格、在眼睛高度)。
+  //   每个物体算张角 θ 和 θ̇ ⇒ LC4 ∝ θ̇、LPLC2 ∝ θ;每只眼取各物体里最强的,再查一次表。
+  //   看不看得见:数它挡住了左眼、右眼各多少个小眼,15 个以上算看全了;一个都没挡住就没有输入(头顶 74° 以上、正后方 ±33° 是盲区)
+  const o = { gfL: 0, gfR: 0, dL: 0, dR: 0, lc4L: 0, lc4R: 0, lpL: 0, lpR: 0, th: 0, fy: 0, src: null };
+  const objs = [];
+  if (loom) objs.push({ x: loom.x, y: loom.y, z: loom.z, R: LOOM_R, key: "loomTh" }); else fly.loomTh = 0;
+  const pr = fly.peer, pd = pr ? Math.hypot(pr.x - fly.x, pr.y - fly.y) : 99;   // 另一只果蝇:8 格(16 mm)以外张角太小、不算;墙挡住了也看不见
+  if (pr && !pr.flight && pd < 8 && rayDist(Math.atan2(pr.y - fly.y, pr.x - fly.x)) > pd) objs.push({ x: pr.x, y: pr.y, z: .5, R: .6, key: "peerTh" }); else fly.peerTh = 0;
+  let best = 0;
+  for (const ob of objs){
+    const v = objView(ob.x, ob.y, ob.z, ob.R), thd = fly[ob.key] > 0 ? (v.th - fly[ob.key]) / dt : 0; fly[ob.key] = v.th;
+    const lc4a = 80 * Math.max(0, Math.min(1, thd / 6)), lpa = 80 * Math.max(0, Math.min(1, (v.th - .35) / 1.25)) * (thd > .3 ? 1 : .2);
+    const wL = Math.min(1, v.covL / 15), wR = Math.min(1, v.covR / 15);
+    o.lc4L = Math.max(o.lc4L, lc4a * wL); o.lpL = Math.max(o.lpL, lpa * wL); o.lc4R = Math.max(o.lc4R, lc4a * wR); o.lpR = Math.max(o.lpR, lpa * wR);
+    const str = (lc4a + lpa) * Math.max(wL, wR); if (str > best){ best = str; o.src = { x: ob.x, y: ob.y, peer: ob.key === "peerTh" }; o.fy = v.fy; o.th = v.th; }
+  }
   const R = LT.rate;
-  if (covL > 0){                                         // 左眼
-    const lc4 = lc4a * wL, lp = lpa * wL; o.lc4L = lc4; o.lpL = lp;
-    o.gfL = Math.max(o.gfL, lookup2(R.DNp01_ipsi, lc4, lp)); o.gfR = Math.max(o.gfR, lookup2(R.DNp01_contra, lc4, lp));
-    o.dL = lookup2(R.DNp02_ipsi, lc4, lp) + lookup2(R.DNp11_ipsi, lc4, lp); }
-  if (covR > 0){                                         // 右眼:镜像
-    const lc4 = lc4a * wR, lp = lpa * wR; o.lc4R = lc4; o.lpR = lp;
-    o.gfR = Math.max(o.gfR, lookup2(R.DNp01_ipsi, lc4, lp)); o.gfL = Math.max(o.gfL, lookup2(R.DNp01_contra, lc4, lp));
-    o.dR = lookup2(R.DNp02_ipsi, lc4, lp) + lookup2(R.DNp11_ipsi, lc4, lp); }
+  if (o.lc4L + o.lpL > 0){ o.gfL = Math.max(o.gfL, lookup2(R.DNp01_ipsi, o.lc4L, o.lpL)); o.gfR = Math.max(o.gfR, lookup2(R.DNp01_contra, o.lc4L, o.lpL));
+    o.dL = lookup2(R.DNp02_ipsi, o.lc4L, o.lpL) + lookup2(R.DNp11_ipsi, o.lc4L, o.lpL); }
+  if (o.lc4R + o.lpR > 0){ o.gfR = Math.max(o.gfR, lookup2(R.DNp01_ipsi, o.lc4R, o.lpR)); o.gfL = Math.max(o.gfL, lookup2(R.DNp01_contra, o.lc4R, o.lpR));
+    o.dR = lookup2(R.DNp02_ipsi, o.lc4R, o.lpR) + lookup2(R.DNp11_ipsi, o.lc4R, o.lpR); }
   return o;
 }
 // 起飞:身体朝向不变,直接往远离黑影的方向飞开(可以飞过墙),落在最远的一块空地上
-function takeoff(est, R){
-  const aw = Math.atan2(fly.y - loom.y, fly.x - loom.x) + (R() - .5) * .8, D = 5 + 3 * R();
+function takeoff(est, R, src){
+  const aw = Math.atan2(fly.y - src.y, fly.x - src.x) + (R() - .5) * .8, D = 5 + 3 * R();
   for (const da of [0, .4, -.4, .8, -.8, 1.2, -1.2]) for (let dd = D; dd >= 2.5; dd -= .5){
     const x1 = fly.x + Math.cos(aw + da) * dd, y1 = fly.y + Math.sin(aw + da) * dd;
     if (x1 < 1.2 || y1 < 1.2 || x1 > G - 1.2 || y1 > G - 1.2 || isWall(x1, y1)) continue;
@@ -1009,7 +1036,7 @@ function flyStep(dt, R){
   const back = () => fly.odor ? fly.odor.mode : (fly.srch ? "search" : "explore");
 
   // 嗅觉:触角在头前 0.67 格;左右触角各一个读数(用梯度估计,见 plume.js 的说明)
-  PLUME.step(dt);
+  if (!fly.secondary) PLUME.step(dt);                 // 羽流和黑影属于整张地图:只由一号推进,别每只果蝇各推一次
   const axn = fly.x + Math.cos(fly.h) * .67, ayn = fly.y + Math.sin(fly.h) * .67;
   const an = PLUME.antennae(axn, ayn, fly.h);
   // ⚙ 近场(只喂蘑菇体,不改行为):站在气味源上(脚下或触角那一格)时,至少闻到 源强 ÷ 100。
@@ -1024,20 +1051,20 @@ function flyStep(dt, R){
   fly.rA = (fly.rAL + fly.rAR) / 2; fly.rC = (fly.rCL + fly.rCR) / 2;
   fly.pnC = cpnAt(fly.rC); fly.smellC = (fly.pnC.DM6 + fly.pnC.DL1) / 2 > SMELL_A;
   // 黑影逼近:视觉 → LC4/LPLC2 → 下行神经元(查表)→ 起飞 / 转身跑
-  loomStep(dt); const ls = fly.ls = loomSense(dt);
+  if (!fly.secondary) loomStep(dt); const ls = fly.ls = loomSense(dt);
   if (fly.flight){ flyFlight(dt, est); fly.turn = 0; fly.dnL = fly.dnR = 0; ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, 0); return { b, est }; }
-  if (loom){
-    const gf = Math.max(ls.gfL, ls.gfR);
-    if (gf > GF_TH && fly.tkCool <= 0 && takeoff(est, R)){     // 起飞:只受上一次落地后的冷却限制,转身途中也能接着起飞
+  if (ls.src){
+    const gf = Math.max(ls.gfL, ls.gfR), who = ls.src.peer ? "另一只果蝇冲过来" : "黑影";
+    if (gf > GF_TH && fly.tkCool <= 0 && takeoff(est, R, ls.src)){     // 起飞:只受上一次落地后的冷却限制,转身途中也能接着起飞
       fly.takeoffs++; fly.srch = null; fly.odor = null; setState("flee");
-      log(`<b>起飞逃跑</b>：巨纤维 ${gf|0} Hz（LC4 ${Math.max(ls.lc4L, ls.lc4R)|0} / LPLC2 ${Math.max(ls.lpL, ls.lpR)|0} Hz）`);
+      log(`<b>起飞逃跑</b>（${who}）：巨纤维 ${gf|0} Hz（LC4 ${Math.max(ls.lc4L, ls.lc4R)|0} / LPLC2 ${Math.max(ls.lpL, ls.lpR)|0} Hz）`);
       flyFlight(0, est); ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, 0); return { b, est };
     }
     if (Math.max(ls.dL, ls.dR) > 2 * DN_TH && fly.escCool <= 0 && fly.state !== "startle" && fly.state !== "feed"){
       // +1 = 左侧的 DN 更强 = 黑影在左边 ⇒ 往右转;两侧几乎一样(黑影在正前方/正上方)时看它偏左还是偏右
       const side = Math.abs(ls.dL - ls.dR) > 5 ? (ls.dL > ls.dR ? 1 : -1) : (ls.fy >= 0 ? 1 : -1);
       fly.goal = wrap(est - side * 1.9); fly.fastT = 1.2; fly.escCool = 2; fly.startles++; fly.srch = null; fly.odor = null; setState("startle");
-      log(`<b>吓了一跳</b>：${side > 0 ? "左" : "右"}侧 DNp02+DNp11 ${Math.max(ls.dL, ls.dR)|0} Hz，巨纤维 ${gf|0} Hz 没到起飞阈值 → 往${side > 0 ? "右" : "左"}转身快跑`);
+      log(`<b>吓了一跳</b>（${who}）：${side > 0 ? "左" : "右"}侧 DNp02+DNp11 ${Math.max(ls.dL, ls.dR)|0} Hz，巨纤维 ${gf|0} Hz 没到起飞阈值 → 往${side > 0 ? "右" : "左"}转身快跑`);
     }
   }
   if (fly.state === "startle" && fly.fastT <= 0) setState(back());
@@ -1184,7 +1211,8 @@ function flyStep(dt, R){
     if (fly.backT > 0){                               // ⚙ 撞墙后先倒退几步(MDN):朝向不变、往后挪,同时照常转身
       fly.backT -= dt; const vb = SPEED * .45, bx = fly.x - Math.cos(fly.h) * vb * dt, by = fly.y - Math.sin(fly.h) * vb * dt;
       if (!isWall(bx, by)){ fly.x = bx; fly.y = by; fly.path += vb * dt; fly.odo += vb * dt; fly.px -= Math.cos(est) * vb * dt; fly.py -= Math.sin(est) * vb * dt; }
-    } else if (isWall(nx, ny)){
+    } else if (isWall(nx, ny) || (fly.peer && !fly.peer.flight && Math.hypot(nx - fly.peer.x, ny - fly.peer.y) < 1 &&
+               Math.hypot(nx - fly.peer.x, ny - fly.peer.y) < Math.hypot(fly.x - fly.peer.x, fly.y - fly.peer.y))){   // ⚙ 撞上另一只果蝇也算挡路
       if (fly.state !== "wall") fly.backT = .4;        // 刚撞上:先退 0.4 秒
       // ⚙ 只在“刚撞上”或“上一次转身已经转完还是墙”时换目标 —— 每拍都换的话电路还没转过去目标就又变了
       if (fly.state !== "wall" || fly.turn === 0){
@@ -1373,9 +1401,15 @@ const OM = VZ.om.map(([eye, H, V]) => { const a = (VZ.Hmax - H) * 4.33 - 5;
 const OMV = OM.map(o => [Math.cos(o.el) * Math.cos(o.az), Math.cos(o.el) * Math.sin(o.az), Math.sin(o.el), o.az > 0]);   // 小眼方向(前、左、上;左眼?)
 const WALL_H = 4, EYE_H = 1;                       // mm:墙高、眼离地高(一格 = 2 mm)
 function rayDist(ang){ for (let d = .3; d < 40; d += .25){ if (isWall(fly.x + Math.cos(ang)*d, fly.y + Math.sin(ang)*d)) return d; } return 40; }
-let LOOMV = null;                                        // 这一帧黑影在复眼里的方向与张角(drawEye 开头算)
+let LOOMV = null, PEERV = null;                          // 这一帧黑影 / 另一只果蝇在复眼里的方向与张角(drawEye 开头算)
+function sphereV(x, y, z, r){ const dx = x - fly.x, dy = y - fly.y, d = Math.hypot(dx, dy), dz = z - EYE_Z, el = Math.atan2(dz, d);
+  return { az: wrap(Math.atan2(dy, dx) - fly.h), se: Math.sin(el), ce: Math.cos(el), ch: Math.cos(Math.atan(r / Math.hypot(d, dz))) }; }
+const inV = (V, az, el) => Math.sin(el) * V.se + Math.cos(el) * V.ce * Math.cos(az - V.az) > V.ch;
 function viewAt(az, el, rays){                      // 返回 [r,g,b] 与亮度
-  if (LOOMV){ const cd = Math.sin(el) * LOOMV.se + Math.cos(el) * LOOMV.ce * Math.cos(az - LOOMV.az); if (cd > LOOMV.ch) return [[16, 12, 20], .01]; }   // 黑影挡住的小眼
+  if (LOOMV && inV(LOOMV, az, el)) return [[16, 12, 20], .01];   // 黑影挡住的小眼
+  if (PEERV){ const L = sunOn ? 1 : .06;                  // 另一只果蝇:红眼睛那一小块 / 褐色身体
+    if (inV(PEERV.head, az, el)) return [[150 * L, 45 * L, 38 * L], .05 * L];
+    if (inV(PEERV.body, az, el)) return [[74 * L, 60 * L, 48 * L], .04 * L]; }
   const k = Math.round((az * 180 / Math.PI + 180) / 5) % 72, top = rays[k];
   const wallTop = Math.atan2(WALL_H - EYE_H, top * 2), floorEdge = -Math.atan2(EYE_H, top * 2);
   const light = sunOn ? 1 : 0.06;
@@ -1401,6 +1435,10 @@ function drawEye(est){
     LOOMV = { az: wrap(Math.atan2(dy, dx) - fly.h), se: Math.sin(el), ce: Math.cos(el), ch: Math.cos(Math.atan(LOOM_R / Math.hypot(d, dz))) }; }
   const W = eyeCv.width, Hh = eyeCv.height, k = (W/2 - 6) / (150 * Math.PI / 180), cy = Hh / 2;
   const rays = Array.from({length:72}, (_, i) => rayDist(fly.h + (i*5 - 180) * Math.PI / 180));
+  PEERV = null; const pr = fly.peer;
+  if (pr){ const d = Math.hypot(pr.x - fly.x, pr.y - fly.y), z = pr.flight ? .5 + 3 * Math.sin(Math.PI * Math.min(1, pr.flight.t / pr.flight.T)) : .5;
+    if (rayDist(Math.atan2(pr.y - fly.y, pr.x - fly.x)) > d || z > 2)   // 墙挡住了就看不见(墙 4 mm 高,眼睛 1 mm)
+      PEERV = { body: sphereV(pr.x, pr.y, z, .42), head: sphereV(pr.x + Math.cos(pr.h) * .55, pr.y + Math.sin(pr.h) * .55, z, .24) }; }
   eyeCx.fillStyle = "#0b0a0e"; eyeCx.fillRect(0, 0, W, Hh);
   for (const o of OM){ const [c] = viewAt(o.az, o.el, rays);
     eyeCx.fillStyle = `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
@@ -1443,6 +1481,8 @@ function draw(b, est){
     const a = .15 + .6 * i / trail.length;
     cx.strokeStyle = q.st === "search" ? `rgba(255,180,74,${a})` : q.st === "reject" ? `rgba(87,201,168,${a})` : `rgba(236,230,220,${a*.8})`;
     cx.beginPath(); cx.moveTo(sx(p.x), sy(p.y)); cx.lineTo(sx(q.x), sy(q.y)); cx.stroke(); }
+  if (B2){ const t2 = B2.trail; cx.strokeStyle = "rgba(143,211,255,.35)"; cx.beginPath();
+    for (let i = 0; i < t2.length; i++){ const q = t2[i]; if (i && Math.hypot(q.x - t2[i-1].x, q.y - t2[i-1].y) > 2) cx.moveTo(sx(q.x), sy(q.y)); else cx[i ? "lineTo" : "moveTo"](sx(q.x), sy(q.y)); } cx.stroke(); }
   // 它以为的食物位置(把路径积分坐标搬回真实地图)
   if (fly.food){ const fx = fly.x + (fly.food.x - fly.px), fy = fly.y + (fly.food.y - fly.py);
     cx.strokeStyle = "#ffb44a"; cx.setLineDash([4,4]); cx.lineWidth = 2; cx.beginPath(); cx.arc(sx(fx), sy(fy), 10, 0, 7); cx.stroke(); cx.setLineDash([]); }
@@ -1452,17 +1492,8 @@ function draw(b, est){
     cx.globalAlpha = sunOn ? 1 : .25; cx.fillStyle = "#ffb44a"; cx.beginPath(); cx.arc(ax, ay, 10 * u, 0, 7); cx.fill(); cx.globalAlpha = 1; }
   if (!sunOn){ cx.fillStyle = "rgba(5,4,10,.35)"; cx.fillRect(0, 0, W, H); }
   cx.setTransform(k, 0, 0, k, W / 2 - k * cam.mx, H / 2 - k * cam.my);
-  // 果蝇(起飞时:地上一个影子、身体略放大、翅膀张开)
-  const fl = fly.flight ? Math.sin(Math.PI * Math.min(1, fly.flight.t / fly.flight.T)) : 0;
-  if (fl > 0){ cx.fillStyle = `rgba(0,0,0,${.35 - .15 * fl})`; cx.beginPath(); cx.ellipse(sx(fly.x) + 4, sy(fly.y) + 6 + 16 * fl, 8, 5, 0, 0, 7); cx.fill(); }
-  cx.save(); cx.translate(sx(fly.x), sy(fly.y) - 10 * fl); cx.rotate(-fly.h + Math.PI/2); cx.scale(1 + .35 * fl, 1 + .35 * fl);
-  cx.fillStyle = fl > 0 ? "rgba(236,240,250,.55)" : "rgba(236,230,220,.35)";
-  const wa = .4 + 1.0 * fl;
-  cx.beginPath(); cx.ellipse(-7 - 3 * fl, 3, 4, 10, -wa, 0, 7); cx.fill(); cx.beginPath(); cx.ellipse(7 + 3 * fl, 3, 4, 10, wa, 0, 7); cx.fill();
-  cx.fillStyle = "#ece6dc"; cx.beginPath(); cx.ellipse(0, 4, 5, 10, 0, 0, 7); cx.fill();
-  cx.fillStyle = "#c84a3a"; cx.beginPath(); cx.arc(0, -8, 4.5, 0, 7); cx.fill();
-  if (fly.state === "feed"){ cx.strokeStyle = "#ffb44a"; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(0, -12); cx.lineTo(0, -18); cx.stroke(); }
-  cx.restore();
+  if (B2) drawFly(B2.fly, "#8fd3ff", "#3d7fb0");
+  drawFly(fly, "#ece6dc", "#c84a3a");
   // 黑影:越低越暗、越小越清晰(高处的影子又大又淡)
   if (loom){ const h = loom.z / LOOM_Z0, rr = LOOM_R * S * (.85 + 1.5 * h), X = sx(loom.x), Y = sy(loom.y);
     const g = cx.createRadialGradient(X, Y, rr * .2, X, Y, rr);
@@ -1475,6 +1506,18 @@ function draw(b, est){
     cx.beginPath(); cx.moveTo(-18, 0); cx.lineTo(18, 0); cx.moveTo(18, 0); cx.lineTo(8, -9); cx.moveTo(18, 0); cx.lineTo(8, 9); cx.stroke(); cx.restore(); }
   drawEB(b);
   if (frameN % 3 === 0) drawEye(est);                 // 视野每 3 帧画一次,省电
+}
+function drawFly(f, body, head){                        // 起飞时:地上一个影子、身体略放大、翅膀张开
+  const fl = f.flight ? Math.sin(Math.PI * Math.min(1, f.flight.t / f.flight.T)) : 0;
+  if (fl > 0){ cx.fillStyle = `rgba(0,0,0,${.35 - .15 * fl})`; cx.beginPath(); cx.ellipse(sx(f.x) + 4, sy(f.y) + 6 + 16 * fl, 8, 5, 0, 0, 7); cx.fill(); }
+  cx.save(); cx.translate(sx(f.x), sy(f.y) - 10 * fl); cx.rotate(-f.h + Math.PI/2); cx.scale(1 + .35 * fl, 1 + .35 * fl);
+  cx.fillStyle = fl > 0 ? "rgba(236,240,250,.55)" : "rgba(236,230,220,.35)";
+  const wa = .4 + 1.0 * fl;
+  cx.beginPath(); cx.ellipse(-7 - 3 * fl, 3, 4, 10, -wa, 0, 7); cx.fill(); cx.beginPath(); cx.ellipse(7 + 3 * fl, 3, 4, 10, wa, 0, 7); cx.fill();
+  cx.fillStyle = body; cx.beginPath(); cx.ellipse(0, 4, 5, 10, 0, 0, 7); cx.fill();
+  cx.fillStyle = head; cx.beginPath(); cx.arc(0, -8, 4.5, 0, 7); cx.fill();
+  if (f.state === "feed"){ cx.strokeStyle = "#ffb44a"; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(0, -12); cx.lineTo(0, -18); cx.stroke(); }
+  cx.restore();
 }
 function drawEB(b){
   const c = document.getElementById("eb").getContext("2d"), W_ = 220, m = W_/2, R1 = 100, R0 = 64;
@@ -1500,7 +1543,7 @@ function start(seed){ world = genWorld(seed); paintAll();
              { seed, windAngle: $("windAz").value * Math.PI / 180, windSpeed: 10, qB: 0.01 });   // ⚙ 苦斑的霉味散发量是糖斑醋味的一半
   for (let i = 0; i < 10; i++) PLUME.step(1);        // 先吹 10 秒,让气味羽流铺开
   loom = null; mbReset(); openTiles = 0; for (const v of world.wall) if (!v) openTiles++;
-  newFly(); $("seed").value = seed; }
+  newFly(); B2 = null; if (FLY2) makeFly2(); $("seed").value = seed; }
 $("bNew").onclick = () => start(parseInt($("seed").value, 10) || 1);
 $("bRand").onclick = () => start(Math.floor(Math.random() * 1e8));
 $("bSun").onclick = () => { sunOn = !sunOn; $("bSun").setAttribute("aria-pressed", sunOn);
@@ -1532,7 +1575,11 @@ function drawMB(){
       mcCx.fillStyle = c.val > 0 ? "#7fd6a4" : "#e58a6e"; mcCx.fillText(c.val > 0 ? "趋近" : "回避", x + bw / 2, base + 28); }); }
 }
 $("bLearn").onclick = () => { mbLearn = !mbLearn; $("bLearn").setAttribute("aria-pressed", mbLearn); $("bLearn").textContent = mbLearn ? "学习：开" : "学习：关"; };
-$("bForget").onclick = () => { mbReset(); log("清空了蘑菇体的记忆"); };
+$("bForget").onclick = () => { mbReset(); if (B2) withFly2(mbReset); log("清空了蘑菇体的记忆"); };
+const fly2UI = () => { $("bFly2").setAttribute("aria-pressed", FLY2); $("bFly2").textContent = FLY2 ? "第二只果蝇：开" : "第二只果蝇：关"; };
+$("bFly2").onclick = () => { FLY2 = !FLY2; try { localStorage.setItem("fly2", FLY2 ? "1" : "0"); } catch (e) {}
+  fly2UI(); if (FLY2){ makeFly2(); log("放进来<b>第二只果蝇</b>（蓝色）：同一张地图，自己的一套大脑"); } else { dropFly2(); log("第二只果蝇拿走了"); } };
+fly2UI();
 /* ─────────── 界面:卡片折叠、设置面板、说明弹窗 ─────────── */
 { let saved = {}; try { saved = JSON.parse(localStorage.getItem("flyCards") || "{}"); } catch (e) {}
   const setOpen = (card, on) => { card.classList.toggle("open", on); card.querySelector(".ch").setAttribute("aria-expanded", on); };
@@ -1604,8 +1651,9 @@ function frame(now){
   let out = null;
   if (!paused){
     const n = Math.max(1, Math.round(dtF * (+$("spd").value) / P.dt));
-    for (let i = 0; i < n; i++) out = flyStep(P.dt, R);
-    if (frameN++ % 2 === 0){ trail.push({x: fly.x, y: fly.y, st: fly.state}); if (trail.length > 1600) trail.shift(); }
+    for (let i = 0; i < n; i++){ out = flyStep(P.dt, R); if (B2) withFly2(() => flyStep(P.dt, R)); }
+    if (frameN++ % 2 === 0){ trail.push({x: fly.x, y: fly.y, st: fly.state}); if (trail.length > 1600) trail.shift();
+      if (B2){ B2.trail.push({x: B2.fly.x, y: B2.fly.y}); if (B2.trail.length > 1600) B2.trail.shift(); } }
   }
   if (!out){ const b = bump(); out = { b, est: wrap(SUN_REF - b.a) }; }
   lastOut = out; draw(out.b, out.est);
@@ -1623,6 +1671,9 @@ function frame(now){
     const ls = fly.ls || { gfL: 0, gfR: 0, dL: 0, dR: 0 };
     $("gfLR").textContent = `${ls.gfL | 0} / ${ls.gfR | 0} Hz`; $("gfB").style.width = Math.min(100, Math.max(ls.gfL, ls.gfR) / 3) + "%";
     $("dnLR").textContent = `${ls.dL | 0} / ${ls.dR | 0} Hz`;
+    const s2 = $("s2"); s2.hidden = !B2;
+    if (B2){ const f2 = B2.fly, e2 = Math.min(100, f2.visitedN / openTiles * 100), g2 = f2.sugar / 100;
+      s2.textContent = `蓝色二号：吃糖 ${g2.toFixed(1)} 份 · 探索 ${e2.toFixed(0)}% · 积分 ${Math.max(0, Math.round(g2 * 10 + e2 - f2.badTastes * 3))} · 起飞 / 转身 ${f2.takeoffs} / ${f2.startles}`; }
   }
   $("tS").textContent = fly.s | 0; $("tB").textContent = fly.b | 0; $("tR").textContent = Math.round(fly.rate) + " Hz";
   $("tBar").style.width = Math.min(100, fly.rate / 3) + "%"; $("hBar").style.width = (fly.hunger * 100) + "%";
