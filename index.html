@@ -22,40 +22,50 @@
   html,body{background:var(--ground);color:var(--text)}
   body{font-family:var(--sans);font-size:15px;line-height:1.55;margin:0;-webkit-tap-highlight-color:transparent;
        padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
-  .wrap{max-width:980px;margin:0 auto;padding-block:0 40px;display:grid;gap:10px}
+  .wrap{max-width:clamp(980px,calc((100vh - 228px) * 1.71 + 10px),1600px);margin:0 auto;padding-block:0 40px;display:grid;gap:10px}
   /* 顶栏:一直在屏幕顶部;设置面板从它下面展开(浮在内容上,不改变顶栏高度 ⇒ 地图不跳) */
   .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--ground);
        display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:10px 8px}
   .top h1{font-family:var(--serif);font-weight:900;font-size:clamp(22px,6vw,28px);margin:0;letter-spacing:.02em;white-space:nowrap}
-  .topbtns{display:flex;gap:8px}
-  .topbtns button{min-height:40px;padding:6px 12px;font-size:14px}
+  .topbtns{display:flex;gap:8px;flex:none}
+  .topbtns button{min-height:40px;padding:6px 12px;font-size:14px;white-space:nowrap}
+  @media (max-width:339.98px){ .topbtns .bl{display:none} .topbtns button{min-width:44px} }
   #bSet[aria-expanded="true"]{border-color:var(--sugar);color:var(--sugar)}
   /* 设置:手机上从底部弹出(盖住卡片,地图照样看得见 ⇒ 改了立刻看到效果);宽屏上从右上角下拉(盖住右栏,不挡地图) */
   /* 手机上:高度 = 地图下面剩下的空间(--mapB = 吸顶地图的下沿,JS 量的),最少 180px */
   .setpanel{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));
-            bottom:calc(env(safe-area-inset-bottom,0px) + 10px);overflow:auto;box-sizing:border-box;
-            max-height:max(180px,calc(100vh - var(--mapB,60vh) - 20px - env(safe-area-inset-bottom,0px)));
-            max-height:max(180px,min(calc(100vh - var(--mapB,60vh) - 20px - env(safe-area-inset-bottom,0px)),calc(100svh - var(--mapB,60vh) - 20px - env(safe-area-inset-bottom,0px))));
-            background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px;
+            bottom:0;overflow:hidden;box-sizing:border-box;
+            max-height:max(180px,calc(100vh - var(--mapB,60vh) - 6px));
+            max-height:max(180px,min(calc(100vh - var(--mapB,60vh) - 6px),calc(100svh - var(--mapB,60vh) - 6px)));
+            background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;padding:0;display:flex;flex-direction:column;
             box-shadow:0 -8px 32px rgba(0,0,0,.6)}
   /* 宽屏:和右栏一样宽(右栏 = (整行 − 10px) / 2.4),不伸进地图那一栏 */
-  @media (min-width:820px){ .setpanel{position:absolute;left:auto;right:0;bottom:auto;top:100%;width:max(300px,calc((100% - 10px) / 2.4));max-height:80vh;box-shadow:0 12px 32px rgba(0,0,0,.55)} }
+  @media (min-width:820px), (min-width:700px) and (min-height:600px){ .setpanel{position:absolute;left:auto;right:0;bottom:auto;top:100%;width:max(300px,calc((100% - 10px) / 2.4));max-height:80vh;box-shadow:0 12px 32px rgba(0,0,0,.55);
+    border-bottom:1px solid var(--line);border-radius:14px} .setscroll{padding-bottom:10px}
+    @media (max-width:1011.98px){ .setpanel{width:max(300px,calc((100% - 10px) / 2.15))} } }
   .setpanel .ctrl{gap:6px}
+  .setscroll{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;display:grid;gap:8px;align-content:start;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px))}
+  .setpanel.hasmore .setscroll{-webkit-mask-image:linear-gradient(#000 calc(100% - 34px),transparent);mask-image:linear-gradient(#000 calc(100% - 34px),transparent)}
+  .setpanel .seedrow{display:flex;flex-wrap:wrap} .setpanel .seedrow #seed{flex:1 1 8em;width:auto;min-width:calc(8ch + 26px);font-variant-numeric:tabular-nums}
+  .setpanel .runrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.2em,1fr))}
+  .setpanel .steprow{display:grid;grid-template-columns:max-content max-content minmax(4.2em,max-content) max-content;align-items:center;gap:6px}
+  .setpanel .steprow .stepper{display:contents} .setpanel .steprow .stepper b{min-width:0}
   .setpanel button,.setpanel select,.setpanel input{min-height:38px;padding:6px 10px;font-size:14px}
   .setpanel label{font-size:12.5px;gap:0}
   .sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .sg{display:grid;gap:4px}
   [hidden]{display:none!important}
-  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted)}
   .main{display:grid;grid-template-columns:1fr;gap:10px}
   /* 地图一直看得见:手机上贴在顶栏下面(mapcol 用 display:contents,让 mapbox 的“吸附范围”是整列而不是它自己那一小块);
      宽屏上整个左栏吸附 */
   .mapcol{display:contents}
-  .mapbox{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px));z-index:20;
+  .mapbox{container-type:inline-size;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px));z-index:20;
           background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px;min-width:0;
           box-shadow:0 -10px 0 var(--ground)}   /* 盖住顶栏和地图之间的缝,别让下面的卡片从缝里透出来 */
   /* 画布填满整个框:宽度 100%,高度 = min(宽度, 半屏)。窄屏是正方形;又宽又矮的窗口是长方形,默认缩放照样装下整张图,放大后用满整个框 */
   #map,#map3d{width:100%;aspect-ratio:1;max-height:min(48vh,48svh);display:block;border-radius:8px;touch-action:pan-y;cursor:zoom-in}
+  @media (max-width:699.98px) and (max-height:720px) and (orientation:portrait){ #map,#map3d{max-height:min(40vh,40svh)} }   /* 只管竖着拿的矮手机;横屏本来就矮,再压就太小 */
   #map3d{touch-action:none;cursor:grab}                  /* 3D:单指 = 转视角,所以不让页面跟着滑(从下面的卡片上滑页面) */
   #map3d.tooling{cursor:crosshair}
   #map.zoomed{touch-action:none}                       /* 没放大时手指在地图上竖着滑 = 滚页面;放大后才由地图接管拖动 */
@@ -65,63 +75,82 @@
   .mapctl{display:flex;align-items:center;gap:6px;margin-top:6px}
   .mapctl #zLvl{font-family:var(--mono);min-width:3.2em}
   .mapctl .zhint{margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .mapctl button{min-width:40px;min-height:38px;padding:4px 10px;font-size:16px;line-height:1}
+  .mapctl button{min-width:40px;min-height:38px;padding:4px 10px;font-size:16px;line-height:1;flex:none;white-space:nowrap}   /* 按钮不折行;挤的时候让提示字省略 */
   @media (max-width:440px){ .mapctl .zhint{display:none} .mapctl #zLvl{margin-right:auto} }
+  @media (max-width:359.98px){ .mapctl{gap:4px} .mapctl button{min-width:34px;padding:4px 7px} }
+  @container (max-width:17.5em){ #zFol .fl{display:none} }
+  @media (min-width:700px) and (max-width:1011.98px){ .mapctl .zhint{display:none} .mapctl #zLvl{margin-right:auto} }
   .tools{display:flex;gap:4px;margin-top:6px;overflow-x:auto;scrollbar-width:none}
-  .tools button{flex:1 1 auto;min-width:0;min-height:36px;padding:4px 4px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
-  .tools button i{display:inline-block;width:9px;height:9px;border-radius:2px}
+  .tools button{flex:1 1 auto;min-width:34px;min-height:36px;padding:4px 4px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
+  .tools button i{display:inline-block;width:9px;height:9px;border-radius:2px;flex:none}
+  @media (max-width:359.98px){ .tools{flex-wrap:wrap} .tools button{flex:1 0 auto;padding:4px 7px} }   /* 七个按钮挤不下:分两行(4 + 3),别把单字按钮压成 23px 宽 */
   #map.tooling{touch-action:none;cursor:crosshair}
   .mapctl button:disabled{opacity:.35;cursor:default}
   #brain{touch-action:pan-y}                               /* 竖着滑 = 滚页面,横着拖 = 转大脑 */
-  .brlist{display:grid;gap:3px;margin-bottom:6px} .brlist .row{cursor:pointer;border-radius:6px} .brlist .row.on{background:rgba(255,255,255,.06)}
+  .brlist{display:grid;gap:0;margin-bottom:6px} .brlist .row{cursor:pointer;border-radius:6px} .brlist .row.on{background:rgba(255,255,255,.06)}
+  #oSmell{word-break:keep-all}
   .brpath{margin-top:4px;min-height:1.5em} .brpath b{color:var(--text)}
-  .brlist .row{display:grid;grid-template-columns:10px 1fr 64px;align-items:center;gap:8px}
+  .bredges{list-style:none;margin:4px 0;padding:0;display:grid;gap:1px} .bredges li{display:flex;justify-content:space-between;gap:10px}
+  .bredges li .num{white-space:nowrap;color:var(--text)} .bredges li > span:first-child{word-break:keep-all;min-width:0;text-wrap:balance} .bredges .neg{color:#6fb7ff} .bredges .mod{color:#c79bff}
+  .brlist .row{display:grid;grid-template-columns:10px minmax(0,1fr) 64px;align-items:center;gap:8px;min-height:32px;padding-inline:4px}
+  .brlist .row > b{margin-left:0!important} .brlist .row > span{text-wrap:balance;line-height:1.3}
   .brlist i{width:10px;height:10px;border-radius:50%} .brlist b{height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:block}
   .brlist b span{display:block;height:100%}
-  .scores button.sc{min-height:34px;padding:2px 8px;background:none;border:1px solid transparent;border-radius:8px}
+  .scores button.sc{min-height:34px;padding:2px 7px;background:none;border:1px solid transparent;border-radius:8px}
+  @media (max-width:399.98px){ .scores button.sc{padding:2px 5px} .sc b{font-size:18px} }
   .scores button.sc.on{border-color:var(--line);background:rgba(255,255,255,.05)}
   .stepper{display:inline-flex;align-items:center;gap:6px;margin-right:10px} .stepper > span{color:var(--muted);font-size:13px}
   .stepper button{min-width:36px;min-height:36px;padding:0;font-size:18px} .stepper b{min-width:3.6em;text-align:center}
-  .eyemode{align-items:center;gap:8px;margin-top:4px} .eyemode button{min-height:32px;padding:3px 10px;font-size:12px;white-space:nowrap}
+  .eyemode{align-items:center;gap:8px;margin-top:4px} .eyemode button{min-height:32px;padding:3px 10px;font-size:12px;white-space:nowrap;min-width:7.5em}
   #zFol[aria-pressed="true"],#z3d[aria-pressed="true"]{border-color:var(--sugar);color:var(--sugar)}
   /* 手机上往下滚(看卡片)时:顶栏滑出屏幕、地图跟着往上补位、地图下面的按钮行裁掉;往上滚就回来。
      只用 transform 和 clip-path,不改任何元素的高度 ⇒ 页面不会跟着跳,也不会因为跳动又反过来触发收起/展开 */
-  @media (max-width:819.98px){
+  @media (max-width:699.98px), (max-width:819.98px) and (max-height:599.98px){
     .top,.mapbox{transition:transform .22s ease,clip-path .22s ease}
+    /* 收起时地图框的下边:clip-path 会连阴影一起裁掉,所以用一条 1px 的线画在裁切处,别让下面滑过来的卡片和地图连成一块 */
+    .mapbox::after{content:"";position:absolute;left:0;right:0;bottom:var(--ctlH,0px);height:1px;background:var(--line);opacity:0;transition:opacity .22s;pointer-events:none}
+    html.compact .mapbox::after{opacity:1}
     .mapbox{clip-path:inset(-12px -12px -12px -12px round 14px)}
     html.compact .top{transform:translateY(calc(-100% - env(safe-area-inset-top,0px)));pointer-events:none}
     html.compact .mapbox{transform:translateY(calc(-1 * var(--topH,56px)));clip-path:inset(-12px -12px var(--ctlH,0px) -12px round 14px)}
   }
-  @media (min-width:820px){
+  @media (min-width:820px), (min-width:700px) and (min-height:600px){
     .main{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:start}
+    @media (max-width:1011.98px){ .main{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)} }
     .mapcol{display:grid;gap:8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--topH,56px))}
     .mapbox{position:static;top:auto;box-shadow:none}
-    #map,#map3d{max-height:calc(100vh - var(--topH,56px) - 150px)}   /* 留出下面的按钮行和图例 */
+    #map,#map3d{max-height:calc(100vh - var(--topH,56px) - var(--mapRes,172px))}   /* 留出下面的按钮行和图例(--mapRes 由 JS 量,图例折成三行也装得下) */
   }
   .side{display:grid;gap:8px;min-width:0}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px;min-width:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px;min-width:0;overflow-x:clip;grid-template-columns:minmax(0,1fr)}   /* 卡片里任何一行再宽也撑不宽卡片、更撑不宽页面 */
   /* 卡片:收起 = 标题 + 主图;点开 = 全部内容 */
   .card:not(.open){cursor:pointer}
   .card:not(.open) .more{display:none}
-  .more{display:grid;gap:8px;min-width:0}
-  .ch{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:28px;border-radius:6px}
+  .more{display:grid;gap:8px;min-width:0;grid-template-columns:minmax(0,1fr)}
+  .ch{all:unset;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;cursor:pointer;min-height:36px;margin-block:-4px;border-radius:6px}
+  .ch .eyebrow{flex:1 1 auto;min-width:0;text-wrap:balance} .ch .tag{flex:none}
   .ch:focus-visible{outline:2px solid var(--sugar);outline-offset:2px}
-  .ch::after{content:"▾";color:var(--muted);font-size:13px;transition:transform .15s}
+  .ch{position:relative;padding-right:18px}
+  .ch::after{content:"▾";color:var(--muted);font-size:13px;transition:transform .15s;position:absolute;right:0;top:9px;line-height:18px}
   .ch > :nth-child(2){margin-left:auto}                /* 标签和 ▾ 一起靠右 */
   .card.open .ch::after{transform:rotate(180deg)}
   .img{width:100%;height:auto;max-width:100%;display:block}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 12px}
+  .row > :first-child{min-width:0} .row > :last-child:not(:first-child){margin-left:auto} .row > .num,.row > .tag{white-space:nowrap}
   .tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
   .tag.brain{color:var(--brain);border-color:#5a4a1f}
   .tag.rule{color:var(--rule)}
-  .state{font-family:var(--serif);font-weight:900;font-size:22px;min-width:0}
-  .strow{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .scores{display:flex;gap:10px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+  .state{font-family:var(--serif);font-weight:900;font-size:22px;flex:1 0 auto;white-space:nowrap}
+  .strow.below .scores{flex-basis:100%;margin-left:0;justify-content:flex-start;gap:4px 8px}
+  .strow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 10px}
+  .scores{display:flex;gap:4px 6px;flex:0 1 auto;min-width:0;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
   .sc{display:inline-flex;align-items:center;gap:5px} .sc b{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
   .sc i,.sctab th i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
 
   .sctab{width:100%;border-collapse:collapse;font-size:13px}
-  .sctab td,.sctab th{padding:3px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .sctab.many{font-size:12px} .sctab.many td,.sctab.many th{padding-left:5px}
+  .sctab.tight{font-size:11px} .sctab.tight td,.sctab.tight th{padding-left:3px;padding-right:2px}
+  .sctab td,.sctab th{padding:3px 4px 3px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
   .sctab td:first-child,.sctab th:first-child{text-align:left;color:var(--muted)}
 
   .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
@@ -130,15 +159,16 @@
   .stats em{font-style:normal;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .meter{height:10px;background:#0f0e13;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
   .meter i{display:block;height:100%;width:0;background:var(--sugar);transition:width .15s linear}
-  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .num{font-family:var(--sans);font-variant-numeric:tabular-nums} #zLvl{font-family:var(--mono)}
   .small{font-size:12.5px;color:var(--muted)}
   .ebrow{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:center}
   #eb{width:92px;height:92px}
   .cmpS{display:grid;gap:2px;min-width:0}
-  .cmpBig{display:flex;align-items:baseline;gap:8px;min-width:0}
+  #cmpLine span{white-space:nowrap}
+  .cmpBig{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px;min-width:0}
   .cmpBig .num{font-size:26px;font-weight:700;line-height:1.1}
-  .cmpBig em{font-style:normal;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .card.open .ebrow{grid-template-columns:150px 1fr} .card.open #eb{width:150px;height:150px} .card.open .cmpS{display:none}
+  .cmpBig em{font-style:normal;font-size:12px;color:var(--muted)}
+  .card.open .ebrow{grid-template-columns:clamp(96px,38%,150px) minmax(0,1fr)} .card.open #eb{width:100%;height:auto;aspect-ratio:1} .card.open .cmpS{display:none}
   .ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   button,input,select{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
   button{cursor:pointer}
@@ -149,9 +179,12 @@
   input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--sugar);width:100%}
   .legend{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11.5px;line-height:1.35;color:var(--muted);padding-inline:2px}
   .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
-  .legend .lg2{color:var(--text);opacity:.7}
-  .log{font-size:13px;color:var(--muted);display:grid;gap:3px;max-height:16em;overflow:auto}
-  .card:not(.open) .log{max-height:1.45em;overflow:hidden}      /* 收起时只露最新一条 */
+  .legend .lg2{color:var(--text);opacity:.7} .legend .lgbr{flex-basis:100%;height:0}
+  .log{font-size:13px;color:var(--muted);display:grid;gap:0}
+  .log > div{padding:3px 0;border-top:1px solid var(--line)} .log > div:first-child{border-top:0}
+  .card:not(.open) .log > div:not(:first-child){display:none}      /* 收起时只露最新一条,一行,放不下就省略号 */
+  .card:not(.open) .log > div:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-top:0}
+  .card.open .whenClosed{display:none}
   .ctrl button,.ctrl select,.ctrl input{min-height:44px}
   .log b{color:var(--text);font-weight:500}
   .note{color:var(--muted);font-size:13.5px;max-width:70ch}
@@ -164,41 +197,48 @@
   dialog#info::backdrop{background:rgba(5,4,8,.72)}
   .dhead{position:sticky;top:0;background:var(--panel);display:flex;align-items:center;justify-content:space-between;gap:10px;
          padding:12px 16px;border-bottom:1px solid var(--line);z-index:1}
-  .dhead h2{font-family:var(--serif);font-weight:900;font-size:20px;margin:0}
+  .dhead h2{font-family:var(--serif);font-weight:900;font-size:clamp(16px,5vw,20px);margin:0;text-wrap:balance}
+  #tbl th{white-space:nowrap} dialog#info table{font-family:var(--sans)} dialog#info td,dialog#info th{text-wrap:pretty}
+  @media (max-width:420px){ #tbl td,#tbl th{padding:3px 4px} }
+  @media (max-width:359.98px){ #tbl td,#tbl th{padding:3px 2px} }
   .dhead button{min-width:44px;min-height:44px;padding:0}
   dialog#info .note{padding:4px 18px 20px;max-width:none}
   .note p{margin:0 0 9px}
   table{border-collapse:collapse;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
   td,th{padding:3px 7px;text-align:right;border-bottom:1px solid var(--line)}
   th{color:var(--muted);font-weight:400}
-  .tw{overflow-x:auto}
+  .tw{overflow-x:auto;background:linear-gradient(to right,var(--panel) 30%,rgba(21,19,27,0)) left center/24px 100% no-repeat local,
+      linear-gradient(to left,var(--panel) 30%,rgba(21,19,27,0)) right center/24px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,rgba(236,230,220,.22),transparent) left center/10px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%,rgba(236,230,220,.22),transparent) right center/10px 100% no-repeat scroll}
   .div{position:relative;height:14px;background:#0f0e13;border-radius:7px;border:1px solid var(--line);overflow:hidden}
   .div i{position:absolute;top:0;bottom:0;background:var(--text)}
   .div .mid{left:50%;width:1px;background:var(--muted)}
   .div .thr{width:1px;background:#5a4a1f}
-  .scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+  .scale{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted)} .scale span{white-space:nowrap}
+  .scale span:nth-child(2){min-width:0;white-space:normal;text-align:center;text-wrap:balance}
 </style>
 
 <div class="wrap">
   <div class="top" id="top">
     <h1>果蝇探险</h1>
     <div class="topbtns">
-      <button id="bInfo" aria-haspopup="dialog">ⓘ 说明</button>
-      <button id="bSet" aria-expanded="false" aria-controls="setPanel">⚙ 设置</button>
+      <button id="bInfo" aria-haspopup="dialog" aria-label="说明">ⓘ<span class="bl"> 说明</span></button>
+      <button id="bSet" aria-expanded="false" aria-controls="setPanel" aria-label="设置">⚙<span class="bl"> 设置</span></button>
     </div>
-    <div class="setpanel" id="setPanel" hidden role="region" aria-label="设置">
+    <div class="setpanel" id="setPanel" hidden role="region" aria-label="设置"><div class="setscroll" id="setScroll">
       <div class="sg"><div class="eyebrow">地图</div>
-        <div class="ctrl"><input id="seed" inputmode="numeric" aria-label="地图种子" value="20260924"><button id="bNew">生成地图</button><button id="bRand">随机种子</button></div>
-        <div class="ctrl"><span class="stepper"><span>地图大小</span><button id="mapMinus" aria-label="地图小一点">−</button><b class="num" id="mapSz">12.8 cm</b><button id="mapPlus" aria-label="地图大一点">＋</button></span>
+        <div class="ctrl seedrow"><input id="seed" inputmode="numeric" aria-label="地图种子" value="20260924"><button id="bNew">生成地图</button><button id="bRand">随机种子</button></div>
+        <div class="ctrl steprow"><span class="stepper"><span>地图大小</span><button id="mapMinus" aria-label="地图小一点">−</button><b class="num" id="mapSz">12.8 cm</b><button id="mapPlus" aria-label="地图大一点">＋</button></span>
           <span class="stepper"><span>果蝇</span><button id="flyMinus" aria-label="少一只">−</button><b class="num" id="flyNum">2</b><button id="flyPlus" aria-label="多一只">＋</button></span></div></div>
       <div class="sg"><div class="eyebrow">运行 · 太阳 · 学习</div>
-        <div class="ctrl"><button id="bPause">暂停</button><select id="spd" aria-label="速度"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select><button id="bSun" aria-pressed="true">☀ 太阳：开</button><button id="bLearn" aria-pressed="true">学习：开</button><button id="bForget">清空记忆</button></div></div>
+        <div class="ctrl runrow"><button id="bPause">暂停</button><select id="spd" aria-label="速度"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select><button id="bSun" aria-pressed="true">☀ 太阳：开</button><button id="bLearn" aria-pressed="true">学习：开</button><button id="bForget">清空记忆</button></div></div>
       <div class="sliders">
         <label for="sunAz">太阳方位 <input id="sunAz" type="range" min="-180" max="180" value="60"></label>
         <label for="windAz">风向（空气往哪吹） <input id="windAz" type="range" min="-180" max="180" value="-90"></label></div>
       <div class="sg"><div class="eyebrow">显示</div>
         <div class="ctrl"><button id="bOdor" aria-pressed="true">显示气味雾</button><button id="bTaste" aria-pressed="true">复眼里标出糖苦</button></div></div>
-    </div>
+    </div></div>
   </div>
 
   <div class="main">
@@ -208,7 +248,7 @@
         <canvas id="map3d" hidden aria-label="3D 地图（拖动转视角、双指或滚轮缩放、双指平移）"></canvas>
         <div class="mapctl" role="toolbar" aria-label="地图视图">
           <span class="small" id="zLvl" aria-live="polite">×1.0</span><span class="small zhint">拖动 · 双指/滚轮缩放 · 双击放大</span>
-          <button id="zIn" aria-label="放大">＋</button><button id="zOut" aria-label="缩小">−</button><button id="zFit" aria-label="复位：看整张地图">⤢</button><button id="zFol" aria-pressed="false">◎ 跟随</button><button id="z3d" aria-pressed="false" title="切换 2D / 3D 画面（只是画法不同）">3D</button>
+          <button id="zIn" aria-label="放大">＋</button><button id="zOut" aria-label="缩小">−</button><button id="zFit" aria-label="复位：看整张地图">⤢</button><button id="zFol" aria-pressed="false" aria-label="跟随">◎<span class="fl"> 跟随</span></button><button id="z3d" aria-pressed="false" title="切换 2D / 3D 画面（只是画法不同）">3D</button>
         </div>
         <div class="tools" role="toolbar" aria-label="在地图上动手">
           <button data-tool="look" aria-pressed="true" title="拖动、缩放地图">看</button>
@@ -222,27 +262,27 @@
       </div>
       <div class="legend">
         <span><i style="background:var(--sugar)"></i>糖</span><span><i style="background:var(--bitter)"></i>苦（霉斑）</span><span><i style="background:#b98ad8"></i>坏果子（甜＋苦）</span><span><i style="background:#4a4354"></i>墙</span><span>◌ 它以为的食物</span>
-        <span class="lg2">气味雾</span><span><i style="background:rgba(255,205,110,.55)"></i>醋味</span><span><i style="background:rgba(110,225,200,.55)"></i>霉味</span><span><i style="background:rgba(205,150,255,.55)"></i>坏果子的果香</span><span>左上角箭头 = 风往哪吹</span>
+        <span class="lgbr" aria-hidden="true"></span><span class="lg2">气味雾</span><span><i style="background:rgba(255,205,110,.55)"></i>醋味</span><span><i style="background:rgba(110,225,200,.55)"></i>霉味</span><span><i style="background:rgba(205,150,255,.55)"></i>坏果子的果香</span><span id="lgWind">左上角箭头 = 风往哪吹</span>
       </div>
     </div>
 
     <div class="side">
       <section class="card" data-card="state">
         <button class="ch" aria-expanded="false"><span class="eyebrow">正在做</span><span class="tag rule" id="stTag">⚙ 规则</span></button>
-        <div class="strow">
+        <div class="strow" id="strow">
           <div class="state" id="state">探索</div>
           <div class="scores" id="scores" aria-label="积分"></div>
         </div>
         <div class="more">
           <div class="small" id="stWhy">沿着相对太阳的一个固定角度走直线</div>
           <div class="row small"><span>地图时间</span><span class="num" id="sTime">0:00</span></div>
-          <table class="sctab" id="sctab"></table>
+          <div class="tw"><table class="sctab" id="sctab"></table></div>
           <div class="small">积分 = 吃下的糖（每份 10 分）+ 探索过的地图（每 1% 1 分）− 尝到坏果子（每次 3 分）。1 份糖 = 半格满糖。地图时间是模拟时间，跟着右上角 ⚙ 里的速度走。换地图会清零。</div>
         </div>
       </section>
 
       <section class="card" data-card="brain">
-        <button class="ch" aria-expanded="false"><span class="eyebrow">大脑 · 此刻在忙的神经元</span><span class="tag brain">🧠 位置来自 FlyWire</span></button>
+        <button class="ch" aria-expanded="false"><span class="eyebrow">大脑 · 在忙的神经元</span><span class="tag brain">🧠 位置来自 FlyWire</span></button>
         <canvas id="brain" width="640" height="400" aria-label="大脑里此刻在放电的神经元" class="img"></canvas>
         <div class="scale"><span>← 果蝇的左边</span><span>从背后看 · 拖动转一转</span><span>右边 →</span></div>
         <div class="small brpath" id="brPath">点大脑里亮着的一群（或展开后列表里的一行），看它背后的真实接线。</div>
@@ -255,8 +295,9 @@
         <button class="ch" aria-expanded="false"><span class="eyebrow">视觉 · 果蝇看到的</span><span class="tag brain">🧠 小眼位置来自数据</span></button>
         <canvas id="eye" width="640" height="330" aria-label="复眼视野" class="img"></canvas>
         <div class="scale"><span>← 左眼</span><span>正前</span><span>右眼 →</span></div>
-        <div class="row small eyemode"><span id="eyeMode">画法：示意</span><button id="bEye3D" aria-pressed="false">用 3D 场景渲染</button></div>
+        <div class="row small eyemode"><span id="eyeMode">画法：示意</span><button id="bEye3D" aria-pressed="false">换成 3D 渲染</button></div>
         <div class="more">
+          <div class="small">画法：“3D 渲染”是把 3D 场景在 6 个方向各拍一张小图，再按 1,581 个小眼各自朝的方向取色；“示意”只按方向查地图，快但不画果蝇和立体的墙。</div>
           <div class="small"><b style="color:#f9c54a">黄虚线</b> = 它想去的方向（FC2 上的目标）　<b style="color:#8fd3ff">蓝虚线</b> = 上风。地上的<b style="color:#ffb44a">橙</b>/<b style="color:#57c9a8">青</b>色块是糖/苦——<b>只给你看</b>：糖水无色无形，果蝇的眼睛分不出糖和苦，远处靠闻、脚下靠尝。</div>
           <div class="row small"><span>ER 环神经元（103 个，按偏好方向排）</span><span class="tag brain">🧠 接线图感受野</span></div>
           <canvas id="erbar" width="640" height="26" aria-label="ER 神经元活动" class="img" style="border-radius:4px"></canvas>
@@ -275,9 +316,9 @@
       </section>
 
       <section class="card" data-card="olf">
-        <button class="ch" aria-expanded="false"><span class="eyebrow">嗅觉 · 触角 → 触角叶</span><span class="tag brain">🧠 全脑模拟（修正版）</span></button>
-        <canvas id="glom" width="640" height="118" aria-label="嗅小球投射神经元活动" class="img"></canvas>
-        <div class="row small"><span id="oSmell">没闻到</span><span class="num" id="oKC">KC 0%</span></div>
+        <button class="ch" aria-expanded="false"><span class="eyebrow">嗅觉 · 触角&nbsp;→&nbsp;触角叶</span><span class="tag brain">🧠 全脑模拟（修正版）</span></button>
+        <canvas id="glom" width="640" height="150" aria-label="嗅小球投射神经元活动" class="img"></canvas>
+        <div class="row small"><span id="oSmell">没闻到</span><span id="oKC">KC 0%</span></div>
         <div class="more">
           <div class="row small"><span>醋味 ORN（左 / 右触角）</span><span class="num" id="oA">0 / 0 Hz</span></div>
           <div class="meter"><i id="oAb" style="background:#ffcd6e"></i></div>
@@ -298,14 +339,14 @@
         <div class="row small"><span><b style="color:#ffcd6e">醋味</b> U <b class="num" id="mUA">+1.00</b></span><span><b style="color:#cd96ff">苯乙醛</b> U <b class="num" id="mUC">+1.00</b></span></div>
         <div class="more">
           <div class="small">U = 天生的吸引 +1 ＋ 2 × 蘑菇体学到的偏好。虚线：≥ 0.3 追，≤ −0.3 躲，中间不理。</div>
-          <canvas id="mbComp" width="640" height="118" aria-label="各隔室突触剩余" class="img"></canvas>
+          <canvas id="mbComp" width="640" height="150" aria-label="各隔室突触剩余" class="img"></canvas>
           <div class="small">每个隔室两根柱：这种气味的 KC 到该隔室 MBON 的突触还剩多少（满格 = 没学过）。白字隔室有独立实验证据，灰字只是推断。开关和清空记忆在右上角 ⚙ 设置里。</div>
-          <div class="row small"><span id="mCount">惩罚 0 次 · 奖励 0 次</span><span class="num" id="mKC">KC 0 / 5177</span></div>
+          <div class="row small"><span id="mCount">惩罚 0 次 · 奖励 0 次</span><span id="mKC">KC 0 / 5177</span></div>
         </div>
       </section>
 
       <section class="card" data-card="taste">
-        <button class="ch" aria-expanded="false"><span class="eyebrow">脚下的味道 → 进食神经元</span><span class="tag brain">🧠 全脑模拟</span></button>
+        <button class="ch" aria-expanded="false"><span class="eyebrow">脚下的味道&nbsp;→&nbsp;进食神经元</span><span class="tag brain">🧠 全脑模拟</span></button>
         <div class="row small"><span>糖 <b class="num" id="tS">0</b> Hz · 苦 <b class="num" id="tB">0</b> Hz</span><span class="num" id="tR">0 Hz</span></div>
         <div class="meter"><i id="tBar"></i></div>
         <div class="row small"><span>饥饿</span><span class="tag rule">⚙ 规则</span></div>
@@ -318,7 +359,7 @@
         <div class="ebrow">
           <canvas id="eb" width="220" height="220" aria-label="EPG 环"></canvas>
           <div class="cmpS">
-            <div class="cmpBig"><span class="num" id="rErr2">0°</span><em>脑内估计和真实朝向差多少</em></div>
+            <div class="cmpBig"><span class="num" id="rErr2">0°</span><em>估计与真实朝向之差</em></div>
             <div class="small" id="cmpLine">真实 0° · 以为 0°</div>
           </div>
           <div class="more" style="gap:4px">
@@ -331,7 +372,7 @@
       </section>
 
       <section class="card" data-card="steer">
-        <button class="ch" aria-expanded="false"><span class="eyebrow">转向电路 FC2 → PFL3 → DNa02</span><span class="tag brain">🧠 接线图</span></button>
+        <button class="ch" aria-expanded="false"><span class="eyebrow">转向电路 FC2&nbsp;→&nbsp;PFL3&nbsp;→&nbsp;DNa02</span><span class="tag brain">🧠 接线图</span></button>
         <div class="div" aria-hidden="true"><i class="thr" id="thrL"></i><i class="thr" id="thrR"></i><i class="mid"></i><i id="dDb"></i></div>
         <div class="scale"><span>← 左转</span><span>门槛 ±4 内直走</span><span>右转 →</span></div>
         <div class="more">
@@ -345,7 +386,7 @@
       </section>
 
       <section class="card" data-card="log">
-        <button class="ch" aria-expanded="false"><span class="eyebrow">日志</span><span class="small">点开看最近 30 条</span></button>
+        <button class="ch" aria-expanded="false"><span class="eyebrow">日志</span><span class="small"><span class="whenClosed">点开看</span>最近 30 条</span></button>
         <div class="log" id="log"></div>
       </section>
     </div>
@@ -1512,7 +1553,7 @@ function camFollow(on){
 }
 function camUI(){
   const b = document.getElementById("zFol"); if (!b) return;
-  b.setAttribute("aria-pressed", cam.follow); b.textContent = cam.follow ? "◉ 跟随中" : "◎ 跟随";
+  b.setAttribute("aria-pressed", cam.follow); b.innerHTML = cam.follow ? '◉<span class="fl"> 跟随</span>' : '◎<span class="fl"> 跟随</span>';   // 文字包在 .fl 里:地图框太窄(按字宽算)时只留图标
   const zin = document.getElementById("zIn"), zout = document.getElementById("zOut"), outOff = cam.z <= 1.0001, inOff = cam.z >= Z_MAX - 1e-4;
   // 按钮把自己变灰之前,把键盘焦点挪给另一个缩放按钮(不是“复位”:多按一下 Enter 会把缩放全撤掉),
   //   而且不滚动页面(手机上吸顶按钮行落在 scroll-padding 里,不加 preventScroll 页面会往上跳一截)
@@ -1643,6 +1684,7 @@ async function set3D(on){
   V3.on = on; try { localStorage.setItem("fly3d", on ? "1" : "0"); } catch (e) {}
   cv.hidden = on; cv3.hidden = !on;
   const b = document.getElementById("z3d"); b.setAttribute("aria-pressed", on); b.textContent = on ? "2D" : "3D";
+  { const lw = document.getElementById("lgWind"); if (lw) lw.hidden = on; }
   const hint = document.querySelector(".zhint"); if (hint) hint.textContent = on ? "拖动转视角 · 双指/滚轮缩放 · 双指平移" : "拖动 · 双指/滚轮缩放 · 双击放大";
   if (!on) camResize(); camUI();
   if (lastOut) draw(lastOut.b, lastOut.est);
@@ -1891,6 +1933,13 @@ function viewAt(az, el, rays){                      // 返回 [r,g,b] 与亮度
   const t = Math.max(0, Math.min(1, el / 1.3));
   return [[(111 - 60*t)*light, (134 - 70*t)*light, (168 - 60*t)*light], (.45 - .15*t)*light];
 }
+const CVS = new Map();                                  // 画布:内部像素 / 屏幕 CSS 像素(ResizeObserver 一变就重量)
+function cvScale(cv){ let v = CVS.get(cv); if (v == null){ const w = cv.getBoundingClientRect ? cv.getBoundingClientRect().width : 0; v = w > 0 ? cv.width / w : 1; CVS.set(cv, v); } return v; }
+const cvFont = (cv, px, css = 10.5) => Math.round(Math.max(px, css * cvScale(cv)));   // 画布里要用的字号:不小于原设计,屏幕上不小于 css px
+if (typeof ResizeObserver !== "undefined"){ const ro = new ResizeObserver(es => es.forEach(e => CVS.delete(e.target)));
+  ["eye", "glom", "mbHist", "mbComp", "brain"].forEach(id => { const c = document.getElementById(id); if (c) ro.observe(c); }); }
+if (globalThis.addEventListener) addEventListener("resize", () => CVS.clear());
+const FONTF = () => (globalThis.getComputedStyle ? getComputedStyle(document.body).fontFamily : "sans-serif");
 const eyeCv = document.getElementById("eye"), eyeCx = eyeCv.getContext("2d"), EYEV = { vis: true };
 if (typeof IntersectionObserver !== "undefined") new IntersectionObserver(es => { EYEV.vis = es[0].isIntersecting; }).observe(eyeCv);
 const erCv = document.getElementById("erbar"), erCx = erCv.getContext("2d");
@@ -1912,15 +1961,21 @@ function drawEye(est){
     eyeCx.fillStyle = `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
     eyeCx.beginPath(); eyeCx.arc(W/2 - o.az * k, cy - o.el * k, 4.6, 0, 7); eyeCx.fill(); }
   eyeCx.strokeStyle = "rgba(236,230,220,.18)"; eyeCx.beginPath(); eyeCx.moveTo(W/2, 0); eyeCx.lineTo(W/2, Hh); eyeCx.stroke();
-  const mark = (ego, col, label, y) => {             // ego:相对身体的方向(左为正)
-    eyeCx.fillStyle = col; eyeCx.font = "600 15px " + getComputedStyle(document.body).fontFamily; eyeCx.textAlign = "center";
-    if (Math.abs(ego) > 2.62){ eyeCx.fillText(label + (ego > 0 ? "（左后）" : "（右后）"), ego > 0 ? 60 : W - 60, y); return; }
+  const efs = cvFont(eyeCv, 15, 11);
+  const marks = [];
+  const mark = (ego, col, label, row) => {           // ego:相对身体的方向(左为正);row = 第几行(字号放大后行距跟着变)
+    const y = efs * (row + 1) + row * 3;
+    if (Math.abs(ego) > 2.62){ marks.push({ col, t: label + (ego > 0 ? "（左后）" : "（右后）"), side: ego > 0 ? -1 : 1, y }); return; }
     const X = W/2 - ego * k; eyeCx.strokeStyle = col; eyeCx.setLineDash([6, 5]); eyeCx.lineWidth = 2;
     eyeCx.beginPath(); eyeCx.moveTo(X, y + 4); eyeCx.lineTo(X, Hh - 4); eyeCx.stroke(); eyeCx.setLineDash([]);
-    eyeCx.fillText(label, X, y); };
-  if (fly.state !== "feed") mark(wrap(fly.goal - est), "#f9c54a", "想去", 15);
-  mark(fly.egoUp, "#8fd3ff", "上风", 31);
-  if (fly.lc && fly.lc.drive > 0) mark(fly.lc.az, "#c9b3ff", fly.state === "chase" ? "盯着它" : fly.state === "join" ? "凑过去" : "另一只", 47);
+    marks.push({ col, t: label, X, y }); };
+  if (fly.state !== "feed") mark(wrap(fly.goal - est), "#f9c54a", "想去", 0);
+  mark(fly.egoUp, "#8fd3ff", "上风", 1);
+  if (fly.lc && fly.lc.drive > 0) mark(fly.lc.az, "#c9b3ff", fly.state === "chase" ? "盯着它" : fly.state === "join" ? "凑过去" : "另一只", 2);
+  eyeCx.font = `600 ${efs}px ` + FONTF(); eyeCx.textAlign = "center";
+  for (const m of marks){ const hw = eyeCx.measureText(m.t).width / 2 + 4, X = m.side ? (m.side < 0 ? hw + 2 : W - hw - 2) : Math.max(hw, Math.min(W - hw, m.X));
+    eyeCx.fillStyle = "rgba(11,10,14,.78)"; eyeCx.fillRect(X - hw, m.y - efs, 2 * hw, efs + 5);
+    eyeCx.fillStyle = m.col; eyeCx.fillText(m.t, X, m.y); }
   // ER:眼平面(仰角 15°)上 36 个 10° 方位箱的亮度 → 感受野加权
   const pano = Array.from({length:36}, (_, i) => viewAt((-175 + i*10) * Math.PI / 180, .26, rays)[1]);
   const n = VZ.rf.length, cw = erCv.width / n;
@@ -1940,7 +1995,7 @@ function draw(b, est){
   if (cam.follow){ cam.mx += (sx(fly.x) - cam.mx) * .2; cam.my += (sy(fly.y) - cam.my) * .2; }   // 平滑跟上
   camClamp();
   const k = camK();
-  cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = "#0b0a0e"; cx.fillRect(0, 0, W, H);
+  cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = "#15131b"; cx.fillRect(0, 0, W, H);
   cx.setTransform(k, 0, 0, k, W / 2 - k * cam.mx, H / 2 - k * cam.my);
   cx.imageSmoothingEnabled = false; cx.drawImage(tiles, 0, 0);          // 格子放大后保持方块,不糊
   if (showOdor){ PLUME.render(odImg.data, G, G, { alpha: .6, sA: .35, sB: .35, sC: .35 }); odCx.putImageData(odImg, 0, 0);
@@ -1981,7 +2036,7 @@ function draw(b, est){
     cx.fillStyle = g; cx.beginPath(); cx.arc(X, Y, rr, 0, 7); cx.fill(); }
   // 风往哪吹(屏幕左上角)
   cx.setTransform(1, 0, 0, 1, 0, 0);
-  { const wa = PLUME.wind().angle; cx.save(); cx.translate(46 * u, 46 * u); cx.scale(u, u); cx.fillStyle = "rgba(11,10,14,.72)"; cx.beginPath(); cx.arc(0, 0, 32, 0, 7); cx.fill();
+  { const wa = PLUME.wind().angle, mx0 = Math.max(0, W / 2 - k * cam.mx), my0 = Math.max(0, H / 2 - k * cam.my); cx.save(); cx.translate(mx0 + 46 * u, my0 + 46 * u); cx.scale(u, u); cx.fillStyle = "rgba(11,10,14,.72)"; cx.beginPath(); cx.arc(0, 0, 32, 0, 7); cx.fill();
     cx.rotate(-wa); cx.strokeStyle = "#8fd3ff"; cx.lineWidth = 4; cx.lineCap = "round";
     cx.beginPath(); cx.moveTo(-18, 0); cx.lineTo(18, 0); cx.moveTo(18, 0); cx.lineTo(8, -9); cx.moveTo(18, 0); cx.lineTo(8, 9); cx.stroke(); cx.restore(); }
   drawEB(b);
@@ -1993,8 +2048,8 @@ function drawFly(f, body, head){                        // 起飞时:地上一�
   if (fl > 0){ cx.fillStyle = `rgba(0,0,0,${.35 - .15 * fl})`; cx.beginPath(); cx.ellipse(sx(f.x) + 4 * z, sy(f.y) + (6 + 16 * fl) * z, 8 * z, 5 * z, 0, 0, 7); cx.fill(); }
   cx.save(); cx.translate(sx(f.x), sy(f.y) - 10 * fl * z); cx.rotate(-f.h + Math.PI/2); cx.scale(z * (1 + .35 * fl), z * (1 + .35 * fl));
   cx.fillStyle = fl > 0 ? "rgba(236,240,250,.55)" : "rgba(236,230,220,.35)";
-  const wa = .4 + 1.0 * fl;
-  cx.beginPath(); cx.ellipse(-7 - 3 * fl, 3, 4, 10, -wa, 0, 7); cx.fill(); cx.beginPath(); cx.ellipse(7 + 3 * fl, 3, 4, 10, wa, 0, 7); cx.fill();
+  const wa = .4 + 1.0 * fl, wx = 6.4 + 3.6 * fl, wy = 7.2 - 5.5 * fl;   // 翅根在胸部、翅尖往后外张开(Λ);飞起来张到两侧、略往后掠 —— 和 3D 模型一样
+  cx.beginPath(); cx.ellipse(-wx, wy, 4, 10, wa, 0, 7); cx.fill(); cx.beginPath(); cx.ellipse(wx, wy, 4, 10, -wa, 0, 7); cx.fill();
   cx.fillStyle = body; cx.beginPath(); cx.ellipse(0, 4, 5, 10, 0, 0, 7); cx.fill();
   cx.fillStyle = head; cx.beginPath(); cx.arc(0, -8, 4.5, 0, 7); cx.fill();
   if (f.state === "feed"){ cx.strokeStyle = "#ffb44a"; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(0, -12); cx.lineTo(0, -18); cx.stroke(); }
@@ -2012,13 +2067,31 @@ function drawEB(b){
   c.beginPath(); c.moveTo(m, m); c.lineTo(m - 54*Math.sin(b.a), m - 54*Math.cos(b.a)); c.stroke();
 }
 
-const ST_ROWS = [["score", "积分"], ["sug", "吃糖（份）"], ["exp", "探索了地图"], ["fed", "进食次数"], ["bad", "尝到坏果子"], ["odo", "走过的路"], ["scare", "起飞 / 转身"], ["chase", "追别的果蝇"], ["join", "凑过去"]];
+const ST_ROWS = [["score", "积分"], ["sug", "吃糖（份）"], ["exp", "探索"], ["fed", "进食次数"], ["bad", "尝到坏果子"], ["odo", "走过的路"], ["scare", "起飞/转身"], ["chase", "追别的"], ["join", "凑过去"]];
+let SCW = "";                                            // 上次量积分小标时的“签名”(只数和字数变了才重量)
+function scoreWrap(force){                               // 最长的状态名(5 个字)+ 积分放不下一行 ⇒ 积分整排放到下一行
+  const row = document.getElementById("strow"), st = document.getElementById("state"), sc = document.getElementById("scores");
+  if (!row || !sc || !row.getBoundingClientRect || !sc.children || !globalThis.getComputedStyle) return;   // 测试台里没有真的排版
+  const tb = document.getElementById("sctab"), tw = tb && tb.parentElement;
+  const sig = sc.textContent.length + "|" + row.clientWidth + "|" + (tb ? tb.textContent.length + "|" + (tw.clientWidth || 0) : ""); if (!force && sig === SCW) return; SCW = sig;
+  const chips = [...sc.children], fs = parseFloat(getComputedStyle(st).fontSize) || 22, cw = chips.map(c => c.getBoundingClientRect().width);
+  const sum = cw.reduce((a, w) => a + w, 0), need = 5.2 * fs + 10 + sum + 6 * Math.max(0, chips.length - 1), below = need > row.clientWidth;
+  row.classList.toggle("below", below);
+  const one = sum + 8 * Math.max(0, chips.length - 1), W = row.clientWidth;          // 到了下一行,一排放得下吗?放不下就分成几列均衡的行
+  if (below && one > W && chips.length > 2){ const rows = Math.ceil(one / W), k = Math.ceil(chips.length / rows);
+    sc.style.display = "grid"; sc.style.gridTemplateColumns = `repeat(${k}, max-content)`; }
+  else { sc.style.display = ""; sc.style.gridTemplateColumns = ""; }
+  if (tb && tw && tw.clientWidth){ tb.classList.remove("tight"); if (tb.scrollWidth > tw.clientWidth + 1) tb.classList.add("tight"); } }
+if (typeof ResizeObserver !== "undefined" && document.getElementById("strow")){ const ro = new ResizeObserver(() => scoreWrap(true)); ro.observe(document.getElementById("strow"));
+  const t = document.getElementById("sctab"); if (t && t.parentElement) ro.observe(t.parentElement); }
 function buildScores(){                                   // “正在做”:收起时的积分小标 + 展开后的明细表,列数 = 果蝇数
   const n = FLN, sc = document.getElementById("scores"), tb = document.getElementById("sctab"); if (!sc || !tb) return;
   sc.innerHTML = Array.from({ length: n }, (_, i) => `<button class="sc${i === FOC ? " on" : ""}" data-f="${i}" aria-pressed="${i === FOC}" title="${FNAME[i]}的积分；点一下，所有卡片换成看${FNAME[i]}"><i style="background:${FCOL[i][0]}"></i><b class="num" id="sc${i}" style="color:${FCOL[i][0]}">0</b></button>`).join("");
   sc.querySelectorAll && sc.querySelectorAll("button.sc").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); setFocus(+b.dataset.f); }));
-  tb.innerHTML = `<tr><th></th>${Array.from({ length: n }, (_, i) => `<th style="color:${FCOL[i][0]}"><i style="background:${FCOL[i][0]}"></i>${FNAME[i]}</th>`).join("")}</tr>` +
+  tb.classList && tb.classList.toggle("many", n >= 4);
+  tb.innerHTML = `<tr><th></th>${Array.from({ length: n }, (_, i) => `<th style="color:${FCOL[i][0]}" title="${FNAME[i]}"><i style="background:${FCOL[i][0]}"></i>${n >= 4 ? FNAME[i][0] : FNAME[i]}</th>`).join("")}</tr>` +
     ST_ROWS.map(([k, lab]) => `<tr><td>${lab}</td>${Array.from({ length: n }, (_, i) => `<td class="num" id="st_${k}_${i}">0</td>`).join("")}</tr>`).join("");
+  scoreWrap(true);
 }
 /* ─────────── 大脑实时点亮 ───────────
    位置:FlyWire coordinates.csv.gz(brain_view.py 打包,0..255 量化)。亮度:模拟里此刻的数(见 brainAct),不是另外编的动画。 */
@@ -2066,8 +2139,16 @@ function drawBrain(){
   if (!BRV.vis || (globalThis.document && document.hidden)) return;
   BRV.t += dt; if (BRV.hold > 0) BRV.hold -= dt; else BRV.yaw += (.6 * Math.sin(BRV.t * .25) - BRV.yaw) * Math.min(1, dt * 1.5);   // 没人拖时:在背面 ±35° 之间慢慢晃
   const W = brCv.width, H = brCv.height, sc = BV.scale, S = Math.min(W / (sc[0] * 1.08), H / (sc[1] * 1.15)), cy = Math.cos(BRV.yaw), sy_ = Math.sin(BRV.yaw);
+  const PP0 = BRV.path && BRP[BRV.path];
+  { let tz = 1, tx = 0, ty = 0;                             // 镜头:选中通路时推近到它的外框(留边),没选时整个脑子
+    if (PP0){ let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      for (const nd of PP0.nodes){ const x = (nd.cu[0] / 255 - .5) * sc[0], y = (nd.cu[1] / 255 - .5) * sc[1], z = (nd.cu[2] / 255 - .5) * sc[2];
+        const u = (x * cy + z * sy_) * S, v = y * S; if (u < x0) x0 = u; if (u > x1) x1 = u; if (v < y0) y0 = v; if (v > y1) y1 = v; }
+      if (x1 >= x0){ tz = Math.max(1, Math.min(2.6, W * .6 / (x1 - x0 + 1), H * .5 / (y1 - y0 + 1))); tx = (x0 + x1) / 2; ty = (y0 + y1) / 2; } }
+    const e = Math.min(1, dt * 4); BRV.zm = (BRV.zm || 1) + (tz - (BRV.zm || 1)) * e; BRV.ox = (BRV.ox || 0) + (tx - (BRV.ox || 0)) * e; BRV.oy = (BRV.oy || 0) + (ty - (BRV.oy || 0)) * e; }
+  const ZM = BRV.zm, OX = BRV.ox, OY = BRV.oy;
   const P = (a, i, out) => { const x = (a[i] / 255 - .5) * sc[0], y = (a[i + 1] / 255 - .5) * sc[1], z = (a[i + 2] / 255 - .5) * sc[2];
-    out[0] = W / 2 + (x * cy + z * sy_) * S; out[1] = H / 2 + y * S; out[2] = -x * sy_ + z * cy; return out; };
+    out[0] = W / 2 + ((x * cy + z * sy_) * S - OX) * ZM; out[1] = H / 2 + (y * S - OY) * ZM; out[2] = -x * sy_ + z * cy; return out; };
   if (!BRV.img || BRV.img.width !== W) BRV.img = brCx.createImageData(W, H);
   const d = BRV.img.data; d.fill(0); const o = [0, 0, 0];
   for (let i = 0; i < BRBG.length; i += 3){ P(BRBG, i, o); const px = o[0] | 0, py = o[1] | 0; if (px < 0 || py < 0 || px >= W || py >= H) continue;
@@ -2091,17 +2172,29 @@ function drawBrain(){
     for (const n of PP.nodes){ const c = [0, 0, 0]; P(n.cu, 0, c); ctr[n.id] = c; for (let i = 0; i < n.pts.length; i += 3) dot(n.pts, i, n.sim === false ? "#8a8494" : "#f4f1ea", 1.5, n.sim === false ? .5 : .8); }
     const offSim = id => (PP.nodes.find(n => n.id === id) || {}).sim === false;
     brCx.globalAlpha = 1;
-    for (const e of PP.edges){ const a = ctr[e.a], b = ctr[e.b]; if (!a || !b) continue;
+    const edges = am => { for (const e of PP.edges){ const a = ctr[e.a], b = ctr[e.b]; if (!a || !b) continue;
       const w = 1 + 1.3 * Math.log10(e.syn), col = BR_SG[e.sg] || BR_SG[1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]), L = Math.hypot(b[0] - a[0], b[1] - a[1]);
       if (L < 4) continue; const ex = b[0] - Math.cos(ang) * 9, ey = b[1] - Math.sin(ang) * 9, off = offSim(e.b);
-      brCx.globalAlpha = off ? .55 : 1; if (off) brCx.setLineDash([5, 4]);
+      brCx.globalAlpha = (off ? .55 : 1) * am; if (off) brCx.setLineDash([5, 4]);
       brCx.strokeStyle = col; brCx.lineWidth = w; brCx.beginPath(); brCx.moveTo(a[0], a[1]); brCx.lineTo(ex, ey); brCx.stroke(); brCx.setLineDash([]);
       brCx.fillStyle = col; brCx.beginPath(); brCx.moveTo(b[0] - Math.cos(ang) * 4, b[1] - Math.sin(ang) * 4);
-      brCx.lineTo(ex - Math.cos(ang - .5) * 7, ey - Math.sin(ang - .5) * 7); brCx.lineTo(ex - Math.cos(ang + .5) * 7, ey - Math.sin(ang + .5) * 7); brCx.fill(); brCx.globalAlpha = 1; }
-    brCx.font = "600 13px " + (globalThis.getComputedStyle ? getComputedStyle(document.body).fontFamily : "sans-serif"); brCx.textAlign = "center";
-    for (const n of PP.nodes){ const c = ctr[n.id]; brCx.fillStyle = "#0b0a0e"; brCx.globalAlpha = .8;
-      const tw = brCx.measureText(n.label).width; brCx.fillRect(c[0] - tw / 2 - 3, c[1] - 22, tw + 6, 17); brCx.globalAlpha = 1;
-      brCx.fillStyle = "#f4f1ea"; brCx.fillText(n.label, c[0], c[1] - 9); }
+      brCx.lineTo(ex - Math.cos(ang - .5) * 7, ey - Math.sin(ang - .5) * 7); brCx.lineTo(ex - Math.cos(ang + .5) * 7, ey - Math.sin(ang + .5) * 7); brCx.fill(); brCx.globalAlpha = 1; } };
+    edges(1);
+    const fs = cvFont(brCv, 13, 10.5), lh = fs + 6; brCx.font = `600 ${fs}px ` + FONTF(); brCx.textAlign = "center";
+    const placed = [], hit = r => placed.some(q => r.x < q.x + q.w && q.x < r.x + r.w && r.y < q.y + q.h && q.y < r.y + r.h);
+    for (const n of PP.nodes.slice().sort((a, b) => ctr[a.id][1] - ctr[b.id][1])){ const c = ctr[n.id], tw = brCx.measureText(n.label).width + 8;
+      const cxl = Math.max(tw / 2 + 2, Math.min(W - tw / 2 - 2, c[0]));   // 别伸出画布
+      let r = null;                                         // 先放在点上方,撞了就依次试下方、再往上、再往下……
+      for (let k = 0; k < 12 && !r; k++){ const dy = k % 2 ? 8 + (k >> 1) * lh : -(8 + lh + (k >> 1) * lh), q = { x: cxl - tw / 2, y: c[1] + dy, w: tw, h: lh - 2 };
+        if (q.y >= 0 && q.y + q.h <= H && !hit(q)) r = q; }
+      if (!r) r = { x: cxl - tw / 2, y: Math.max(0, c[1] - 8 - lh), w: tw, h: lh - 2 };
+      placed.push(r); r.n = n; r.c = c; r.cx = cxl; }
+    for (const r of placed){ const c = r.c, ly = r.y + r.h / 2;
+      if (Math.abs(ly - c[1]) > lh + 4 || Math.abs(r.cx - c[0]) > 4){ brCx.strokeStyle = "rgba(244,241,234,.45)"; brCx.lineWidth = 1;
+        brCx.beginPath(); brCx.moveTo(c[0], c[1]); brCx.lineTo(r.cx, ly < c[1] ? r.y + r.h : r.y); brCx.stroke(); }
+      brCx.fillStyle = "#0b0a0e"; brCx.globalAlpha = .8; brCx.fillRect(r.x, r.y, r.w, r.h); brCx.globalAlpha = 1; }
+    edges(.4);                                               // 标签底下的连线再淡淡描一遍,不被整条盖住
+    for (const r of placed){ brCx.fillStyle = r.n.sim === false ? "#b7b1c2" : "#f4f1ea"; brCx.fillText(r.n.label, r.cx, r.y + r.h / 2 + fs * .36); }
   }
 }
 function brainPick(k){                                     // 选一条通路(k = 群名去掉左右;null = 取消)
@@ -2109,8 +2202,9 @@ function brainPick(k){                                     // 选一条通路(k 
   const PP = BRV.path && BRP[BRV.path];
   if (!PP){ el.innerHTML = k ? "这一群还没整理通路（MDN 的输入主要在腹神经索，这份数据只有脑）。" : "点大脑里亮着的一群（或展开后列表里的一行），看它背后的真实接线。"; brainList(); return; }
   const nm = id => (PP.nodes.find(n => n.id === id) || {}).label || id, off = PP.nodes.some(n => n.sim === false);
-  el.innerHTML = `<b>${PP.title}</b>：` + (PP.edges.length ? PP.edges.slice().sort((a, b) => b.syn - a.syn).slice(0, 6)
-    .map(e => `${nm(e.a)} → ${nm(e.b)} ${e.syn.toLocaleString()} 个突触${BR_SGN[e.sg] || ""}`).join("；") + "。" : "接线图里两步之内找不到每段都有 20 个突触以上的连接——模拟里苦味压下进食是全脑模型算出来的（很多条弱连接加在一起），不是这里能画出来的某一条线。") +
+  el.innerHTML = `<b>${PP.title}</b>` + (PP.edges.length ? `<ul class="bredges">` + PP.edges.slice().sort((a, b) => b.syn - a.syn).slice(0, 6)
+    .map(e => `<li><span>${nm(e.a)}${/）$/.test(nm(e.a)) ? "" : "&nbsp;"}→ ${nm(e.b)}</span><span class="num${e.sg < 0 ? " neg" : e.sg === 0 ? " mod" : ""}">${e.syn.toLocaleString()} 突触${BR_SGN[e.sg] || ""}</span></li>`).join("") + "</ul>"
+      : "：接线图里两步之内找不到每段都有 20 个突触以上的连接——模拟里苦味压下进食是全脑模型算出来的（很多条弱连接加在一起），不是这里能画出来的某一条线。") +
     (off ? "灰色虚线 = 接线图里的下一站，模拟没用到。" : "") + "点空白处取消。";
   brainList();
 }
@@ -2134,8 +2228,8 @@ function brainList(){
 /* ─────────── 界面 ─────────── */
 const $ = id => document.getElementById(id);
 function tableHTML(){
-  const L = TT.levels; let h = `<table><tr><th>糖 ↓ 苦 →</th>${L.map(v => `<th>${v}</th>`).join("")}</tr>`;
-  TT.rate.forEach((row, i) => h += `<tr><th>${L[i]} Hz</th>${row.map(v => `<td style="color:${v > 60 ? "#ffb44a" : "#8f889c"}">${Math.round(v)}</td>`).join("")}</tr>`);
+  const L = TT.levels; let h = `<table><tr><th>糖↓ 苦→（Hz）</th>${L.map(v => `<th>${v}</th>`).join("")}</tr>`;
+  TT.rate.forEach((row, i) => h += `<tr><th>${L[i]}</th>${row.map(v => `<td style="color:${v > 60 ? "#ffb44a" : "#8f889c"}">${Math.round(v)}</td>`).join("")}</tr>`);
   return h + "</table>"; }
 $("tbl").innerHTML = tableHTML();
 function start(seed){ mapCounts(); world = genWorld(seed); world.cva = [new Float32Array(G * G)]; world.cvaList = [[]]; paintAll();
@@ -2156,29 +2250,37 @@ const glCv = $("glom"), glCx = glCv.getContext("2d");
 const mhCv = $("mbHist"), mhCx = mhCv.getContext("2d"), mcCv = $("mbComp"), mcCx = mcCv.getContext("2d");
 function drawMB(){
   { const W = mhCv.width, H = mhCv.height, y = u => 8 + (3 - Math.max(-1, Math.min(3, u))) / 4 * (H - 16);   // U ∈ [−1, 3]
-    mhCx.clearRect(0, 0, W, H); mhCx.font = "600 12px " + getComputedStyle(document.body).fontFamily;
+    const fs = cvFont(mhCv, 12); mhCx.clearRect(0, 0, W, H); mhCx.font = `600 ${fs}px ` + FONTF();
     mhCx.strokeStyle = "rgba(236,230,220,.14)"; mhCx.beginPath(); mhCx.moveTo(0, y(0)); mhCx.lineTo(W, y(0)); mhCx.stroke();
     mhCx.setLineDash([4, 4]); mhCx.strokeStyle = "rgba(236,230,220,.35)";
     for (const t of [.3, -.3]){ mhCx.beginPath(); mhCx.moveTo(0, y(t)); mhCx.lineTo(W, y(t)); mhCx.stroke(); } mhCx.setLineDash([]);
-    mhCx.fillStyle = "#8f889c"; mhCx.fillText("追", 4, y(.3) - 4); mhCx.fillText("躲", 4, y(-.3) + 13);
-    if (mbHist.length > 1){ const t1 = mbHist[mbHist.length - 1][0], t0 = Math.max(mbHist[0][0], t1 - 300), X = t => (t - t0) / Math.max(1, t1 - t0) * (W - 30) + 24;
+    mhCx.fillStyle = "#8f889c"; mhCx.fillText("追", 4, y(.3) - 4); mhCx.fillText("躲", 4, y(-.3) + fs + 1);
+    if (mbHist.length > 1){ const x0 = fs + 12, t1 = mbHist[mbHist.length - 1][0], t0 = Math.max(mbHist[0][0], t1 - 300), X = t => (t - t0) / Math.max(1, t1 - t0) * (W - x0 - 6) + x0;
       for (const [idx, col] of [[1, "#ffcd6e"], [2, "#cd96ff"]]){ mhCx.strokeStyle = col; mhCx.lineWidth = 2.5; mhCx.beginPath();
         mbHist.forEach((h, i) => { if (h[0] < t0) return; i ? mhCx.lineTo(X(h[0]), y(h[idx])) : mhCx.moveTo(X(h[0]), y(h[idx])); }); mhCx.stroke(); }
       mhCx.fillStyle = "#8f889c"; mhCx.textAlign = "right"; mhCx.fillText("最近 " + Math.round(t1 - t0) + " 秒", W - 4, H - 4); mhCx.textAlign = "left"; } }
-  { const W = mcCv.width, H = mcCv.height, n = MB.comps.length, bw = W / n, base = H - 34, fa = mbCompFrac("A"), fc = mbCompFrac("C");
-    mcCx.clearRect(0, 0, W, H); mcCx.font = "600 12px " + getComputedStyle(document.body).fontFamily; mcCx.textAlign = "center";
+  { const W = mcCv.width, n = MB.comps.length, bw = W / n, fa = mbCompFrac("A"), fc = mbCompFrac("C");
+    const S = cvScale(mcCv); let fs = cvFont(mcCv, 12), stag = false; mcCx.font = `600 ${fs}px ` + FONTF();
+    { const wmax = Math.max(mcCx.measureText("回避").width, ...MB.comps.map(c => mcCx.measureText(c.name).width));
+      if (wmax > bw * .94){ const f1 = Math.floor(fs * bw * .94 / wmax);
+        if (f1 / S >= 9.5) fs = Math.max(9, f1); else { stag = true; fs = Math.max(9, Math.min(fs, Math.floor(fs * bw * 1.9 / wmax))); } } }   // 太窄:隔室名上下错开两行
+    { const Hn = stag ? 200 : 150; if (mcCv.height !== Hn) mcCv.height = Hn; }
+    const H = mcCv.height, lh = fs + 3, base = H - (stag ? 3 : 2) * lh - 8;
+    mcCx.clearRect(0, 0, W, H); mcCx.font = `600 ${fs}px ` + FONTF(); mcCx.textAlign = "center";
     MB.comps.forEach((c, i) => { const x = i * bw;
       [[fa[i], "#ffcd6e", .14], [fc[i], "#cd96ff", .52]].forEach(([v, col, ox]) => { const w = bw * .32;
         mcCx.fillStyle = "#1c1a23"; mcCx.fillRect(x + bw * ox, 6, w, base - 6);
         if (v !== null){ mcCx.fillStyle = col; const h = v * (base - 6); mcCx.fillRect(x + bw * ox, base - h, w, h); } });
-      mcCx.fillStyle = c.conf === "confirmed" ? "#ece6dc" : "#6f6a7a"; mcCx.fillText(c.name, x + bw / 2, base + 14);
-      mcCx.fillStyle = c.val > 0 ? "#7fd6a4" : "#e58a6e"; mcCx.fillText(c.val > 0 ? "趋近" : "回避", x + bw / 2, base + 28); }); }
+      const alt = stag && i % 2;
+      const hw = mcCx.measureText(c.name).width / 2 + 2, lx = Math.max(hw, Math.min(W - hw, x + bw / 2));
+      mcCx.fillStyle = c.conf === "confirmed" ? "#ece6dc" : "#6f6a7a"; mcCx.fillText(c.name, lx, base + lh + (alt ? lh : 0));
+      mcCx.fillStyle = c.val > 0 ? "#7fd6a4" : "#e58a6e"; mcCx.fillText(c.val > 0 ? "趋近" : "回避", x + bw / 2, base + (stag ? 3 : 2) * lh + 4); }); }
 }
 function eyeUI(){ const on = EYE3D && V3.ok, b = $("bEye3D");
-  $("eyeMode").textContent = on ? "画法：3D 场景渲染（6 个方向各拍一张小图，按 1,581 个小眼的方向取色）" : EYE3D ? "画法：示意（3D 渲染要联网下载一次画图库）" : "画法：示意";
-  b.textContent = on ? "换成示意" : "用 3D 场景渲染"; b.setAttribute("aria-pressed", on); }
+  $("eyeMode").textContent = on ? "画法：3D 渲染" : EYE3D ? "画法：示意（3D 要联网下载一次画图库）" : "画法：示意";
+  b.textContent = on ? "换成示意" : "换成 3D 渲染"; b.setAttribute("aria-pressed", on); }
 function eyeTo3D(){ return load3D().then(() => { if (!V3.ok) init3D(); }).catch(() => {}).then(eyeUI); }
-$("bEye3D").onclick = () => { EYE3D = !(EYE3D && V3.ok); try { localStorage.setItem("eye3d", EYE3D ? "1" : "0"); } catch (e) {}
+$("bEye3D").onclick = e => { if (e && e.stopPropagation) e.stopPropagation(); EYE3D = !(EYE3D && V3.ok); try { localStorage.setItem("eye3d", EYE3D ? "1" : "0"); } catch (e) {}
   V3.ecache = null; if (EYE3D) eyeTo3D(); else eyeUI(); };
 $("bLearn").onclick = () => { mbLearn = !mbLearn; $("bLearn").setAttribute("aria-pressed", mbLearn); $("bLearn").textContent = mbLearn ? "学习：开" : "学习：关"; };
 $("bForget").onclick = () => { BUN.forEach(bb => withFly(bb, mbReset)); log("清空了蘑菇体的记忆（每一只都清了）"); };
@@ -2209,8 +2311,11 @@ mapUI();
   const top = $("top"), panel = $("setPanel"), bSet = $("bSet"), mbox = document.querySelector ? document.querySelector(".mapbox") : null, root = document.documentElement;
   // 量高度:--topH 给吸顶地图定位;--mapB(地图下沿)给手机上的设置面板定高度;scroll-padding 让键盘焦点别停在吸顶地图/顶栏下面
   // 吸顶位置要把刘海的安全边距算进去:直接读 CSS 解出来的 top(已含 env(safe-area-inset-top))
-  const setTop = () => { const th = top.offsetHeight, wide = !!(globalThis.matchMedia && matchMedia("(min-width:820px)").matches);
+  const lgd = document.querySelector ? document.querySelector(".legend") : null;
+  const setTop = () => { const th = top.offsetHeight, wide = !!(globalThis.matchMedia && matchMedia("(min-width:820px), (min-width:700px) and (min-height:600px)").matches);
     root.style.setProperty("--topH", th + "px");
+    { const c = [$("map"), $("map3d")].find(x => x && !x.hidden);                 // 宽屏:地图下面的按钮行 + 工具行 + 图例 + 间距
+      if (wide && mbox && c && lgd) root.style.setProperty("--mapRes", Math.ceil(mbox.offsetHeight - c.offsetHeight + lgd.offsetHeight + 8 + 14) + "px"); }
     const cs = mbox && globalThis.getComputedStyle ? parseFloat(getComputedStyle(top).top) || 0 : 0, mb = cs + th + (mbox ? mbox.offsetHeight : 0) + 10;
     root.style.setProperty("--mapB", mb + "px");
     root.style.scrollPaddingTop = (wide ? cs + th + 8 : mb + 6) + "px"; };
@@ -2224,13 +2329,21 @@ mapUI();
     //   (滚动锚定、页面变短时贴底),那种滚动不是人滚的 —— 以前把它也当成上滑/下滑,顶栏和按钮就跟着一缩一放
     for (const t of ["touchstart", "touchmove", "touchend", "wheel", "keydown", "pointerdown"]) addEventListener(t, () => { userT = performance.now(); }, { passive: true, capture: true });
     addEventListener("scroll", () => { const y = scrollY, dy = y - lastY; lastY = y;
-      if (performance.now() - userT > 1200){ acc = 0; if (y < 40) root.classList.remove("compact"); return; }
+      const minY = top.offsetHeight + (parseFloat(getComputedStyle(root).getPropertyValue("--ctlH")) || 0) + 8;   // 收起会让出顶栏 + 按钮行这么高
+      if (performance.now() - userT > 1200){ acc = 0; if (y < minY) root.classList.remove("compact"); return; }
       acc = Math.sign(dy) === Math.sign(acc) ? acc + dy : dy;
-      const cl = root.classList, want = y < 40 ? false : acc > 14 ? true : acc < -14 ? false : cl.contains("compact");
+      const cl = root.classList, want = y < minY ? false : acc > 14 ? true : acc < -14 ? false : cl.contains("compact");
       if (want && !panel.hidden) return;                           // 设置面板开着时不收
       if (want !== cl.contains("compact")){ if (want) setCtl(); cl.toggle("compact", want); } }, { passive: true }); }
-  if (typeof ResizeObserver !== "undefined"){ const ro = new ResizeObserver(setTop); ro.observe(top); if (mbox) ro.observe(mbox); }
-  const showSet = on => { panel.hidden = !on; bSet.setAttribute("aria-expanded", on); };
+  if (typeof ResizeObserver !== "undefined"){ const ro = new ResizeObserver(setTop); ro.observe(top); if (mbox) ro.observe(mbox); if (lgd) ro.observe(lgd); }
+  const pscr = $("setScroll") || panel, moreHint = () => panel.classList.toggle("hasmore", pscr.scrollTop + pscr.clientHeight < pscr.scrollHeight - 2);
+  const fitSet = () => { if (panel.hidden) return;
+    if (globalThis.matchMedia && matchMedia("(min-width:820px), (min-width:700px) and (min-height:600px)").matches || !mbox){ panel.style.maxHeight = ""; moreHint(); return; }
+    const c = [$("map"), $("map3d")].find(x => x && !x.hidden), mb = mbox.getBoundingClientRect().bottom;
+    let t = mb; if (innerHeight - t < 200 && c) t = c.getBoundingClientRect().bottom + 2;
+    panel.style.maxHeight = Math.max(160, innerHeight - t) + "px"; moreHint(); };
+  pscr.addEventListener("scroll", moreHint, { passive: true }); addEventListener("resize", fitSet);
+  const showSet = on => { panel.hidden = !on; bSet.setAttribute("aria-expanded", on); if (on) fitSet(); };
   bSet.onclick = () => showSet(panel.hidden);
   addEventListener("keydown", e => { if (e.key === "Escape" && !panel.hidden){ showSet(false); bSet.focus(); } });
   // 点面板外面 = 关面板;这一下别再顺带点开下面的卡片 —— 吞掉“这根手指”抬起时的那次 click。
@@ -2256,16 +2369,23 @@ mapUI();
 function drawGlom(){
   const bars = OT.glomeruli.filter(g => g !== "DA2").map((g, i) => [g, fly.pn[OT.glomeruli.indexOf(g)], "#ffcd6e"])
     .concat([["DM6", fly.pnC.DM6, "#cd96ff"], ["DL1", fly.pnC.DL1, "#cd96ff"], ["VL2a", fly.pnC.VL2a, "#cd96ff"], ["DA2", fly.pn[GI.DA2], "#6ee1c8"]]);
-  const W = glCv.width, H = glCv.height, n = bars.length, bw = W / n, base = H - 22;
-  glCx.clearRect(0, 0, W, H); glCx.font = "600 13px " + getComputedStyle(document.body).fontFamily; glCx.textAlign = "center";
-  bars.forEach(([g, v0, col], i) => { const v = v0 || 0, h = Math.min(1, v / 330) * (base - 16), x = i * bw + bw * .18, w = bw * .64;
-    glCx.fillStyle = "#1c1a23"; glCx.fillRect(x, 16, w, base - 16);
+  const W = glCv.width, n = bars.length, bw = W / n, S = cvScale(glCv);
+  let fs = cvFont(glCv, 13), stag = false; glCx.font = `600 ${fs}px ` + FONTF();
+  { const wmax = Math.max(glCx.measureText("330").width, ...bars.map(b => glCx.measureText(b[0]).width));
+    if (wmax > bw * .94){ const f1 = Math.floor(fs * bw * .94 / wmax);
+      if (f1 / S >= 9.5) fs = Math.max(9, f1); else { stag = true; fs = Math.max(9, Math.min(fs, Math.floor(fs * bw * 1.9 / wmax))); } } }   // 太窄:名字和数上下错开两行
+  { const Hn = stag ? 200 : 150; if (glCv.height !== Hn) glCv.height = Hn; }
+  const H = glCv.height, rows = stag ? 2 : 1, lh = fs + 3, top = rows * lh + 4, base = H - rows * lh - 6;
+  glCx.clearRect(0, 0, W, H); glCx.font = `600 ${fs}px ` + FONTF(); glCx.textAlign = "center";
+  bars.forEach(([g, v0, col], i) => { const v = v0 || 0, h = Math.min(1, v / 330) * (base - top), x = i * bw + bw * .18, w = bw * .64, alt = stag && i % 2;
+    glCx.fillStyle = "#1c1a23"; glCx.fillRect(x, top, w, base - top);
     glCx.fillStyle = col; glCx.fillRect(x, base - h, w, h);
-    glCx.fillStyle = "#8f889c"; glCx.fillText(g, i * bw + bw / 2, H - 5);
-    glCx.fillStyle = "#ece6dc"; glCx.fillText(v < 1 ? "0" : Math.round(v), i * bw + bw / 2, 12); });
+    { const hw = glCx.measureText(g).width / 2 + 2, lx = Math.max(hw, Math.min(W - hw, i * bw + bw / 2));
+      glCx.fillStyle = "#8f889c"; glCx.fillText(g, lx, alt ? H - 4 : H - 4 - (stag ? lh : 0)); }
+    glCx.fillStyle = "#ece6dc"; glCx.fillText(v < 1 ? "0" : Math.round(v), i * bw + bw / 2, alt ? fs + lh : fs); });
   // 门槛虚线:醋味/苯乙醛是两个嗅小球平均过 30 Hz,霉味是 DA2 过 100 Hz —— 各画在自己那几根柱子上
   glCx.strokeStyle = "rgba(236,230,220,.35)"; glCx.setLineDash([4, 4]);
-  { const ty = base - (SMELL_A / 330) * (base - 16), tb = base - (SMELL_B / 330) * (base - 16); glCx.beginPath();
+  { const ty = base - (SMELL_A / 330) * (base - top), tb = base - (SMELL_B / 330) * (base - top); glCx.beginPath();
     glCx.moveTo(0, ty); glCx.lineTo((n - 1) * bw, ty); glCx.moveTo((n - 1) * bw, tb); glCx.lineTo(W, tb); glCx.stroke(); }
   glCx.setLineDash([]);
 }
@@ -2290,16 +2410,18 @@ function frame(now){
   $("rH").textContent = deg(fly.h) + "°"; $("rE").textContent = deg(out.est) + "°";
   const e = Math.abs(deg(wrap(out.est - fly.h))); $("rErr").textContent = e + "°"; $("rErr").style.color = e < 15 ? "#7fd6a4" : "#ffb44a";
   $("rErr2").textContent = e + "°"; $("rErr2").style.color = e < 15 ? "#7fd6a4" : "#ffb44a";
-  $("cmpLine").textContent = `真实 ${deg(fly.h)}° · 以为 ${deg(out.est)}° · ${sunOn ? "看得到太阳，一直在校准" : "关灯了，只靠记忆"}`;
+  { const h = `<span>真实 ${deg(fly.h)}°&nbsp;·</span> <span>以为 ${deg(out.est)}°&nbsp;·</span> ${sunOn ? "<span>看得到太阳，</span><span>一直在校准</span>" : "<span>关灯了，</span><span>只靠记忆</span>"}`, el = $("cmpLine");
+    if (el.innerHTML !== h) el.innerHTML = h; }
   $("rPos").textContent = (Math.hypot(fly.px - fly.x, fly.py - fly.y) * 2).toFixed(1) + " mm";
   if (frameN % 8 === 0 || paused){
     const t = fly.simT | 0, two = n => String(n).padStart(2, "0");
     $("sTime").textContent = t >= 3600 ? `${t / 3600 | 0}:${two((t % 3600) / 60 | 0)}:${two(t % 60)}` : `${t / 60 | 0}:${two(t % 60)}`;
     const st = f => { const exp = Math.min(100, f.visitedN / openTiles * 100), sug = f.sugar / 100, mm = f.odo * 2;
       return { score: Math.max(0, Math.round(sug * 10 + exp - f.badTastes * 3)), sug: sug.toFixed(1), exp: exp.toFixed(0) + "%", fed: f.fed, bad: f.badTastes,
-        odo: mm < 1000 ? (mm / 10).toFixed(0) + " cm" : (mm / 1000).toFixed(2) + " m", scare: `${f.takeoffs} / ${f.startles}`, chase: f.chases, join: f.joins }; };
+        odo: mm < 1000 ? (mm / 10).toFixed(0) + "cm" : mm < 10000 ? (mm / 1000).toFixed(1) + "m" : (mm / 1000).toFixed(0) + "m", scare: `${f.takeoffs}/${f.startles}`, chase: f.chases, join: f.joins }; };
     allFlies().forEach((f, i) => { const v = st(f), e = $("sc" + i); if (!e) return; e.textContent = v.score;
       for (const [k] of ST_ROWS){ const c = $(`st_${k}_${i}`); if (c) c.textContent = v[k]; } });
+    scoreWrap();
     const ls = fly.ls || { gfL: 0, gfR: 0, dL: 0, dR: 0 };
     $("gfLR").textContent = `${ls.gfL | 0} / ${ls.gfR | 0} Hz`; $("gfB").style.width = Math.min(100, Math.max(ls.gfL, ls.gfR) / 3) + "%";
     $("dnLR").textContent = `${ls.dL | 0} / ${ls.dR | 0} Hz`;
@@ -2314,7 +2436,7 @@ function frame(now){
   { const c = fly.cv || { pL: 0, pR: 0 }; $("oCva").textContent = `${c.pL|0} / ${c.pR|0} Hz${fly.cvaOn ? " → 往那边拐" : ""}`; } $("oBb").style.width = Math.min(100, fly.rB / 3) + "%";
   if (drawN % 3 === 1) drawGlom();
   $("oSmell").textContent = fly.smellB ? `闻到霉味（DA2 ${fly.pn[GI.DA2]|0} Hz）→ 避开` :
-    (fly.smellA || fly.smellC) ? (fly.Umix <= -.3 ? "闻到学会讨厌的气味 → 躲开" : fly.Umix < .3 ? "闻到了，但蘑菇体说“无所谓”" : fly.hunger > .3 ? `闻到${fly.rC > fly.rA ? "苯乙醛" : "醋味"} → 逆风追` : "闻到了，但不饿，不追") : "没闻到（虚线 = “闻到”的门槛：果香 30 Hz，霉味 100 Hz）";
+    (fly.smellA || fly.smellC) ? (fly.Umix <= -.3 ? "闻到学会讨厌的气味 → 躲开" : fly.Umix < .3 ? "闻到了，但蘑菇体说“无所谓”" : fly.hunger > .3 ? `闻到${fly.rC > fly.rA ? "苯乙醛" : "醋味"} → 逆风追` : "闻到了，但不饿，不追") : "没闻到（虚线 = “闻到”的门槛：果香 30\u00a0Hz，霉味 100\u00a0Hz）";
   $("oKC").textContent = `Kenyon 细胞亮 ${((fly.kcA + fly.kcC) / MB.nkc_total * 100).toFixed(1)}%`;
   const fmtU = u => (u >= 0 ? "+" : "") + u.toFixed(2);
   $("mUA").textContent = fmtU(fly.UA); $("mUC").textContent = fmtU(fly.UC);
