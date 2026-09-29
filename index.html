@@ -284,9 +284,9 @@
       <section class="card" data-card="brain">
         <button class="ch" aria-expanded="false"><span class="eyebrow">大脑 · 在忙的神经元</span><span class="tag brain">🧠 位置来自 FlyWire</span></button>
         <canvas id="brain" width="640" height="400" aria-label="大脑里此刻在放电的神经元" class="img"></canvas>
-        <div class="scale"><span>← 果蝇的左边</span><span>从背后看 · 拖动转一转</span><span>右边 →</span></div>
-        <div class="small brpath" id="brPath">点大脑里亮着的一群（或展开后列表里的一行），看它背后的真实接线。</div>
         <div class="more">
+          <div class="scale"><span>← 果蝇的左边</span><span>从背后看 · 拖动转一转</span><span>右边 →</span></div>
+          <div class="small brpath" id="brPath">点大脑里亮着的一群（或下面列表里的一行），看它背后的真实接线。</div>
           <div id="brList" class="brlist"></div>
           <div class="small">每个点是一个真实的神经元，放在它在 FlyWire 脑子里的位置（坐标文件里一个神经元有几个点的，取中位数）。灰色的是随机挑的 1.4 万个神经元，勾出整个脑子，两边鼓出来的是视叶。亮的是页面里正在用的那几群：指南针环、ER、PFL3、DNa02、LC10a、LC4、LPLC2、巨纤维、DNp02/DNp11、嗅觉和味觉神经元的亮度，是模拟里它们此刻的数（环形模型、接线图感受野或全脑模型查表给的）；标了 ⚙ 的几群是按规则或代理量给的：FC2（目标由规则放上去，一直一样亮）、MBON（按亮着的 KC 数估的）、PAM/PPL1（尝到糖或苦那一下闪一下）、MDN（倒退是规则）。蘑菇体那一团里亮的，就是这一刻真正被气味点亮的那几个 Kenyon 细胞。</div>
         </div>
@@ -416,12 +416,14 @@
 <h3>⚙ 规则</h3>
 <p><b>行为</b>（按果蝇行为学论文写，不是从接线图算的）：隔几秒换一个想去的方向、撞墙时换目标、吃完后来回折返的局部搜索、转身时放慢、饥饿。饥饿靠激素和神经调质，接线图里没有；走路的电路在腹神经索，这份数据也不含。</p>
 <p><b>气味</b>：饿着闻到“想追”的气味 → 朝上风走；气味断了 → 垂直风向左右扫、越扫越宽；闻到霉味 → 走开，而且不进食、正在吃也停下（Álvarez-Salvado 2018；Stensmyr 2012）。躲的时候（天生怕霉味和学来的躲避都一样），离源头很近就背着气味变浓的方向走；远处的话，霉味往下风走，学来的躲避斜着横穿出羽流——苯乙醛的羽流顺风拖得很长，往下风走等于一直在里面。接线图里找得到“风感受器 → 中央复合体”的通路，但决定不了它指向逆风还是顺风，所以方向是规则。目标仍然交给 FC2 → PFL3 → DNa02 去转。</p>
-<p><b>逃跑和倒退</b>：黑影是一个从上方落下的东西（点一下 = 快速拍下，按住 = 慢慢压）。每只眼按复眼数据数它挡住了多少个小眼（复眼图里画的就是这个），再算它的张角和张角增长速度：增长速度喂给 LC4，张角大小喂给 LPLC2（这种分工照 Ache 2019）。巨纤维超过 150 Hz ⇒ 起飞，身体朝向不变、往远离黑影的方向飞出 5~8 格，可以飞过墙（照 von Reyn 2014：巨纤维放电对应快速的短时起飞）；巨纤维没到、但 DNp02+DNp11 超过 80 Hz ⇒ 转身快跑，往下行神经元弱的那一侧转。撞墙时先倒退几步再转身：倒退由 MDN 驱动（Bidaye 2014，数据里有这 4 个神经元），但真实触发它的是腿上的触觉，在腹神经索里，这份数据只有脑，所以这一步是规则。起飞以后会被风吹偏（⚙ 物理，不是大脑）：飞行时按那一点的风（带阵风）往下风带走 35%，落点通常偏 2~4 mm，所以轨迹是弯的；它自己的路径积分不知道被吹了，落地后“以为的位置”会多一点偏差。</p>
-<p><b>好几只果蝇</b>（⚙ 设置里用“果蝇 −/＋”选 1~5 只，“地图大小 −/＋”选 6.4~19.2 cm 见方）：每只都有自己一整套——指南针环、转向、嗅觉、味觉、蘑菇体学习、逃跑回路都是自己的，只有地图（糖、气味、黑影、同伴留下的 cVA）是共用的，所以它们会抢同一片糖。碰上别的果蝇算挡路（规则，和撞墙一样先退再转）。它们互相看得见：复眼图里别的果蝇是一小团褐色，头那一小块偏红——约 10 mm 外只占七八个小眼，走到 3~4 mm 才有几十个；果蝇的眼睛就这么粗，认同伴靠的是“一小团会动的暗点”。别的果蝇朝自己冲过来时，它在复眼里迅速变大，和黑影走的是同一条 LC4/LPLC2 → 巨纤维回路，所以有时会被吓得转身甚至起飞。<b>换成看另一只</b>：点“正在做”里那一排彩色积分，所有卡片（视觉、嗅觉、指南针、转向、学习、大脑）和日志都换成那一只的；地图上它外面有一圈，“跟随”和 3D 也跟着它。<b>多放几只、场地小一点</b>，追随、凑过去、互相吓一跳才常见：5 分钟实测（每种 16 张图）：4 只放在 6.4 cm 的场地里，平均 48% 的进食时间旁边 8 mm 内就有别的果蝇（31%~69%）；3 只在 12.8 cm 里约 13%；2 只在 19.2 cm 里只有约 2%，16 张图里 11 张一次都没碰上。每多一只大约多 45% 的计算量，手机吃力时帧率保险会先关复眼的 3D 渲染、再降速度。看见之后要不要跟上去，见下一段。</p>
-<p><b>追着另一只</b>：吃饱了（饥饿 &lt; 0.45）、在闲逛或兜圈、看见另一只（LC10a 总驱动 &gt; 20 Hz、相距 2~12 格）时，平均一两秒内会跟上去。跟的时候“想去的方向”就设成当前朝向，让指南针那条路不拉偏，往左还是往右转全交给 LC10a → DNa02 的查表；远了追得快（最多 1.3 倍速），近了慢下来贴着看（约一个身长）。跟丢 1.2 秒、撞墙 3 次、追满 18 秒或饿了就放弃，之后 10~20 秒不再追。这些全是规则：LC10a 的输入按目标的张角（太小看不见、太大归逼近回路管）乘它在视网膜上动得多快来给；雄蝇里决定“想不想追”的是 P1 神经元的性唤起（Hindmarsh Sten 2021），而这份数据是雌蝇的脑，没有 P1，所以这道门是设的。被追的那只并没有专门的规则：追的那只贴近、或它自己回头迎上去时，对方在复眼里迅速变大，走的就是黑影那条逃跑回路，于是常常被吓得转身或起飞。</p>
-<p><b>凑过去</b>：⚙ 饿了（饥饿 &gt; 0.3）、正在逛或在找吃的、看得见另一只、而且它停着不动（看了半秒以上，多半是在吃），相距 2.2~10 格（约 4 mm~2 cm）时（有好几只时，从停着的那几只里挑最显眼的，旁边走来走去的不算），大多在一秒内动身走过去；往左还是往右转照旧交给 LC10a → DNa02 查表，到了（中心相距约 1.8 格 = 3.6 mm）就先侧着走开一点、再绕着它脚下那块兜圈找，脚下有糖就吃。途中闻到醋味也不改道（它脚下那块糖本来就在散醋味）；闻到霉味或学来讨厌的气味照样会躲开。它看不见对方是不是在吃，只看得见“停着”。依据与出入：成年果蝇确实爱聚到别的果蝇正在用的食物上（Lihoreau 2016；Tinette 2004），但真实里主要靠气味（信息素、带着同伴气味的食物）；“看见就过去”最接近的实验是 Sun 2020——走动的果蝇会靠近被胶固定住的同伴（死的也一样），单靠视觉或单靠嗅觉都够，但那个实验里没有食物。所以这条规则是照这几篇写的简化，不是接线图或实验直接给出的；LC10a 已知的作用是雄蝇求偶追逐，借来用也是假设。实测：两只放在一起跑时它不常发生——平均每 10 分钟约 0.65 次：地图有 13 cm 见方、糖很分散，两只很少离得 2 cm 以内，而它的视力大概也就这么远。48 组配对（16 张地图 × 3 个随机种子，各 10 分钟，开和关从同一个起点出发）里，“吃东西时对方就在 4 格内”的时间比例从 5.6% 变成 6.8%，差 +1.2 个百分点，95% 区间 −0.8~+3.3，和 0 分不开。真遇上时它是管用的：专门摆一个场景（二号在 6 格外的一块糖上吃，一号饿着在逛），18 次里 10 次动身凑过去（另外几次是先闻到那块糖的醋味、直接逆风追过去了），8 次走到，其中 5 次一到就在那块糖上吃上了。想常看到它，就在设置里多放几只、把地图调小，或用地图工具在两只之间放一块糖。</p>
+<p><b>逃跑和倒退</b>：黑影是一个从上方落下的东西（点一下 = 快速拍下，按住 = 慢慢压）。每只眼按复眼数据数它挡住了多少个小眼（复眼图里画的就是这个），再算它的张角和张角增长速度：增长速度喂给 LC4，张角大小喂给 LPLC2（这种分工照 Ache 2019）。巨纤维超过 150 Hz ⇒ 起飞：先按起跳方向（背离黑影）跳出去，⚙ 再在空中把身体转到飞的方向（转速上限约 900°/s，3D 里能看到侧倾），沿一条略弯的路线飞 5~8 格、落地前减速，可以飞过墙（照 von Reyn 2014：巨纤维放电对应快速的短时起飞；真实的逃跑飞行里还会连着侧倾急转，Muijres 2014，这里只做了一次转向）。⚙ 飞行放慢了约 10 倍——真实起跳约 0.5 m/s（Card &amp; Dickinson 2008），一跳 1.6 cm 只要 0.05 秒，放真速一眨眼就看不见了。巨纤维没到、但 DNp02+DNp11 超过 80 Hz ⇒ 吓一跳，往下行神经元弱的那一侧转（方向来自接线图）；⚙ 动作的节奏照实测：先刹住、停 0.1~0.4 秒，同时原地转到背对黑影（本来就大致背对着就不转），再冲出去——最快约平常的 1.35 倍、每次不一样（Zacarias 2018），⚙ 保持约 0.8 秒再慢慢降回来。走得慢的时候更容易<b>愣住</b>（Zacarias 2018：走得 &lt; 2 mm/s 时约 77%、&gt; 15 mm/s 时约 27%；真实里由下行神经元 DNp09 管，这里是规则），愣 1~6 秒再转身走开（真实里常常更久，这里截短了）；⚙ 被别的果蝇吓到时，愣住的机会按一半算（上面的比例是用黑色圆盘逼近量的，同伴走过来是不是一样没人量过）。黑影在正前方时先倒退几步、退完再转（LC16 → MDN：Wu 2016、Sen 2017）。接连被吓：更容易愣住、冲出去时也快一点（Gibson 2015 说的持续防御状态；⚙ 这里简化成一个 15 秒慢慢消退的计数）。撞墙时先倒退几步再转身：倒退由 MDN 驱动（Bidaye 2014，数据里有这 4 个神经元），但真实触发它的是腿上的触觉，在腹神经索里，这份数据只有脑，所以这一步是规则。起飞以后会被风吹偏（⚙ 物理，不是大脑）：飞行时按那一点的风（带阵风）往下风带走 35%，落点通常偏 2~4 mm，所以轨迹是弯的；它自己的路径积分不知道被吹了，落地后“以为的位置”会多一点偏差。</p>
+<p><b>动作</b>：追着另一只、凑过去、吓一跳、愣住这几种状态里，转向是连续的——追和凑过去时 🧠 转速 ∝ 两侧 DNa02 的放电之差（⚙ 饱和在约 184°/s，经 0.12 秒平滑，对应 DNa02 到转身约 0.15 秒的延迟）；吓一跳原地转身时，往哪边转来自 🧠 DNp02/DNp11，转多快是 ⚙ 规则（剩的角度越多转得越快，最快约 360°/s）。⚙ 脑内指南针环只在固定强度的转身信号上校准过，所以连续转身时，给它的转身信号按转过的角度分成一段段固定强度的脉冲。⚙ 速度有加速度上限（起步约 90 mm/s²、刹车约 140 mm/s²、逃跑冲刺约 200 mm/s²，按 Strauss &amp; Heisenberg 1990、Zacarias 2018 的时间尺度估的），不再瞬间换档。平常探索、找吃的、追味时还是原来的做法（每一刻要么左转、要么右转、要么直走），因为说明里其他的测量都是在那套做法下得到的。地图上和 3D 里的<b>腿</b>是画出来的（⚙）：两组三脚架（左前-右中-左后、右前-左中-右后）交替迈步，步长 ≈ 0.8 mm + 0.045 秒 × 速度（Mendes 2013、DeAngelis 2019），平常速度下约每秒 8 步；原地转身时脚也在迈，走的时候身体随步子轻轻摆。</p>
+
+<p><b>好几只果蝇</b>（⚙ 设置里用“果蝇 −/＋”选 1~5 只，“地图大小 −/＋”选 6.4~19.2 cm 见方）：每只都有自己一整套——指南针环、转向、嗅觉、味觉、蘑菇体学习、逃跑回路都是自己的，只有地图（糖、气味、黑影、同伴留下的 cVA）是共用的，所以它们会抢同一片糖。碰上别的果蝇算挡路（规则，和撞墙一样先退再转）。它们互相看得见：复眼图里别的果蝇是一小团褐色，头那一小块偏红——约 10 mm 外只占七八个小眼，走到 3~4 mm 才有几十个；果蝇的眼睛就这么粗，认同伴靠的是“一小团会动的暗点”。别的果蝇朝自己冲过来时，它在复眼里迅速变大，和黑影走的是同一条 LC4/LPLC2 → 巨纤维回路，所以有时会被吓得愣住、转身或起飞。<b>换成看另一只</b>：点“正在做”里那一排彩色积分，所有卡片（视觉、嗅觉、指南针、转向、学习、大脑）和日志都换成那一只的；地图上它外面有一圈，“跟随”和 3D 也跟着它。<b>多放几只、场地小一点</b>，追随、凑过去、互相吓一跳才常见：5 分钟实测（每种 16 张图）：4 只放在 6.4 cm 的场地里，平均约 45% 的进食时间旁边 8 mm 内就有别的果蝇（29%~67%）；3 只在 12.8 cm 里约 9%；2 只在 19.2 cm 里只有约 2%，16 张图里 11 张一次都没碰上。每多一只大约多 45% 的计算量，手机吃力时帧率保险会先关复眼的 3D 渲染、再降速度。看见之后要不要跟上去，见下一段。</p>
+<p><b>追着另一只</b>：吃饱了（饥饿 &lt; 0.45）、在闲逛或兜圈、看见另一只（LC10a 总驱动 &gt; 20 Hz、相距 2~12 格）时，平均一两秒内会跟上去。跟的时候“想去的方向”就设成当前朝向，让指南针那条路不拉偏，往左还是往右转全交给 LC10a → DNa02 的查表；转得多快跟着两侧 DNa02 放电之差走（真实里这个差和约 0.15 秒后的转速成正比：Rayshubskiy 2025、Yang 2024），所以是平滑地一直盯着对方转，不是一顿一顿地折；⚙ 为了转得平滑，左右眼对它的分配在正前方约 ±30° 里渐变（真实的双眼重叠约 15°）。⚙ 速度照 Cook 1979 量的求偶追随：速度 ≈ 5/秒 ×（中心距 − 4 mm），远了追得快（最多 1.3 倍速），贴到对方身后约 4 mm 就停下；对方停着不动时，它绕着对方横着挪一挪（Cook 1979 也看到雄蝇在近处、低速时绕到侧面）。对方在眼里变大，多半是自己走近造成的——只要对方没有朝自己冲过来，就不当成威胁（⚙）。跟丢 1.2 秒、撞墙 3 次、追满 18 秒或饿了就放弃，之后 10~20 秒不再追。这些全是规则：LC10a 的输入按目标的张角（太小看不见、太大归逼近回路管）乘它在视网膜上动得多快来给；雄蝇里决定“想不想追”的是 P1 神经元的性唤起（Hindmarsh Sten 2021），而这份数据是雌蝇的脑，没有 P1，所以这道门是设的。被追的那只并没有专门的规则：追的那只冲过来、或它自己回头迎上去时，对方在复眼里迅速变大，走的就是黑影那条逃跑回路，于是常常被吓得愣住、转身或起飞。</p>
+<p><b>凑过去</b>：⚙ 饿了（饥饿 &gt; 0.3）、正在逛或在找吃的、看得见另一只、而且它停着不动（看了半秒以上，多半是在吃），相距 2.2~10 格（约 4 mm~2 cm）时（有好几只时，从停着的那几只里挑最显眼的，旁边走来走去的不算），大多在一秒内动身走过去；往左还是往右转照旧交给 LC10a → DNa02 查表，到了（中心相距约 1.8 格 = 3.6 mm）就先侧着走开一点、再绕着它脚下那块兜圈找，脚下有糖就吃。途中闻到醋味也不改道（它脚下那块糖本来就在散醋味）；闻到霉味或学来讨厌的气味照样会躲开。它看不见对方是不是在吃，只看得见“停着”。依据与出入：成年果蝇确实爱聚到别的果蝇正在用的食物上（Lihoreau 2016；Tinette 2004），但真实里主要靠气味（信息素、带着同伴气味的食物）；“看见就过去”最接近的实验是 Sun 2020——走动的果蝇会靠近被胶固定住的同伴（死的也一样），单靠视觉或单靠嗅觉都够，但那个实验里没有食物。所以这条规则是照这几篇写的简化，不是接线图或实验直接给出的；LC10a 已知的作用是雄蝇求偶追逐，借来用也是假设。实测：两只放在一起跑时它不常发生——平均每 10 分钟约 0.6 次：地图有 13 cm 见方、糖很分散，两只很少离得 2 cm 以内，而它的视力大概也就这么远。48 组配对（16 张地图 × 3 个随机种子，各 10 分钟，开和关从同一个起点出发）里，“吃东西时对方就在 4 格内”的时间比例关着是 6.4%、开着是 5.4%，差 −1.0 个百分点，95% 区间 −2.7~+0.7，和 0 分不开。真遇上时它是管用的：专门摆一个场景（二号在 6 格外的一块糖上吃，一号饿着在逛），18 次里 10 次动身凑过去（另外几次是先闻到那块糖的醋味、直接逆风追过去了），8 次走到，其中 5 次一到就在那块糖上吃上了。想常看到它，就在设置里多放几只、把地图调小，或用地图工具在两只之间放一块糖。</p>
 <p><b>靠眼睛躲墙</b>：以前只有撞上墙才退、才转。现在每只眼朝前方 10°~100° 打 7 条视线，墙越近、正对得越直，它在眼里扩张得越快——这个扩张率当成 LC4 的输入，墙在眼里的高度当成 LPLC2 的输入，再用黑影那张全脑模型查表读出同侧的 DNp02+DNp11；哪边的更强，就轻轻往另一边偏一点（不起飞、也不算“吓一跳”）。墙怎么变成这两个输入、偏多少是规则；而且真果蝇走路时靠哪些神经元躲墙还没有定论，借用逼近回路是个假设。8 张地图各跑 10 分钟：撞墙次数从 629 次降到 409 次，撞墙状态的时间从 8.1% 降到 5.1%，进食次数从 258 次变成 278 次。撞上以后先退再转的老规则照旧保留。</p>
-<p><b>cVA：同伴吃过的地方</b>：⚙ 果蝇进食时在那一格留下 cVA，挥发得慢，5 分钟左右淡掉一半，并随风往下风拖出一条越来越宽的尾巴（简化的高斯羽流，不算墙的遮挡）。另一只闻到后（只闻对方留的），在醋味此刻“想追”、又不是饿极了（饥饿 0.3~0.65）、正在找吃的时候，醋味“闻到”的门槛最多降一半，并往 DA1 投射神经元强的那一侧拐。依据与出入：cVA 单独几乎不吸引果蝇，它的作用是让食物气味更有吸引力（Bartelt 1985）；喂饱的处女雌蝇更喜欢 cVA+醋而不是只有醋，饿着的只认醋（Lebreton 2015）——可模拟里不饿的果蝇根本不去追醋味，所以 0.3~0.65 这个窗口是折中；Das 2017 在喂饱的处女雌蝇身上看到 cVA 与醋味的协同，机制是醋味经电突触增强 DA1 对 cVA 的反应，这份接线图表示不了电突触，所以“降门槛”只是对这个行为协同的粗略近似。⚠ 简化：真实里只有雄蝇会合成 cVA，交配过的雌蝇身上才带着，处女雌蝇其实留不下；这里每只都当作会留。实测：在这个模拟里测不出稳定的效果。48 组配对（16 张地图 × 3 个随机种子，各 10 分钟，开和关 cVA 从同一个起点出发），进食时间里花在“同伴吃过的那块糖”上的比例从 25.8% 变成 26.9%，差 +1.1 个百分点，95% 区间 −2.2~+4.6，和 0 分不开；cVA 真正起作用的时间平均每 10 分钟只有约 9 秒——两只果蝇很少正好走进对方留下的气味尾巴、又正好在追醋味。所以这一项现在主要是“看得见的机制”（地图上的小点、嗅觉卡片和大脑卡片里的 DA1），不是明显的行为变化。（之前写过“31.7% → 37.1%”，那是二号出生位置没用种子、两次运行起点不同造成的噪声，复审时发现，已更正。）</p>
+<p><b>cVA：同伴吃过的地方</b>：⚙ 果蝇进食时在那一格留下 cVA，挥发得慢，5 分钟左右淡掉一半，并随风往下风拖出一条越来越宽的尾巴（简化的高斯羽流，不算墙的遮挡）。另一只闻到后（只闻对方留的），在醋味此刻“想追”、又不是饿极了（饥饿 0.3~0.65）、正在找吃的时候，醋味“闻到”的门槛最多降一半，并往 DA1 投射神经元强的那一侧拐。依据与出入：cVA 单独几乎不吸引果蝇，它的作用是让食物气味更有吸引力（Bartelt 1985）；喂饱的处女雌蝇更喜欢 cVA+醋而不是只有醋，饿着的只认醋（Lebreton 2015）——可模拟里不饿的果蝇根本不去追醋味，所以 0.3~0.65 这个窗口是折中；Das 2017 在喂饱的处女雌蝇身上看到 cVA 与醋味的协同，机制是醋味经电突触增强 DA1 对 cVA 的反应，这份接线图表示不了电突触，所以“降门槛”只是对这个行为协同的粗略近似。⚠ 简化：真实里只有雄蝇会合成 cVA，交配过的雌蝇身上才带着，处女雌蝇其实留不下；这里每只都当作会留。实测：在这个模拟里测不出稳定的效果。48 组配对（16 张地图 × 3 个随机种子，各 10 分钟，开和关 cVA 从同一个起点出发），进食时间里花在“同伴吃过的那块糖”上的比例关着是 22.4%、开着是 21.8%，差 −0.6 个百分点，95% 区间 −5.2~+4.0，和 0 分不开；cVA 真正起作用的时间平均每 10 分钟只有约 6 秒——两只果蝇很少正好走进对方留下的气味尾巴、又正好在追醋味。所以这一项现在主要是“看得见的机制”（地图上的小点、嗅觉卡片和大脑卡片里的 DA1），不是明显的行为变化。（之前写过“31.7% → 37.1%”，那是二号出生位置没用种子、两次运行起点不同造成的噪声，复审时发现，已更正。）</p>
 <p><b>复眼画面</b>：视觉卡片里的复眼图默认用 3D 场景渲染：在果蝇头上（离地 1 mm）朝 6 个方向各拍一张小图，再按 1,581 个小眼的真实方向取颜色，每个小眼取周围一小块的平均（约 5~9°，看落在小图的哪里）。墙、另一只果蝇、压下来的黑影都是真的挡在它眼前的样子。这只是画法：喂给指南针的 ER 神经元的亮度仍按原来的简化算法算，所以大脑的输入没变。复眼卡片不在屏幕上时不渲染；手机吃力时帧率保险会先把它换回示意画法；离线又没缓存过画图库时也用示意画法。</p>
 <p><b>3D 画面</b>：地图下面的「3D」按钮只是换一种画法，大脑和规则都没变——3D 读的是和 2D 同一份模拟状态。地面就是 2D 那张格子图，墙按真实比例 4 mm 高（果蝇眼睛离地约 1 mm）。「跟随」在 3D 下是跟在一号身后稍高处的第三人称镜头。复眼图有自己的开关（见“复眼画面”），和 3D 地图按钮无关；cVA 留下的小点只画在 2D 地图上。</p>
 <p><b>学习</b>：尝到苦 → 惩罚型多巴胺神经元（PPL1）→ 把最近 6 秒内亮过的 KC 到“趋近”MBON 的突触按比例压低；吃到糖 → 奖励型（PAM）→ 压低到“回避”MBON 的突触，强度随饥饿（Hige 2015；Aso &amp; Rubin 2016）。之后突触慢慢恢复：γ 隔室约 10 分钟、α2 和 β1 约 30 分钟；α1、α3 设成不恢复（当作长期记忆，这是推断），所以学得多了 U 回不到 +1，会停在 +0.6 左右——仍在“追”的范围里。读数 U = 天生的吸引（+1）＋ 2 × 学到的偏好：U ≥ 0.3 追，U ≤ −0.3 躲，中间不理。读数固定用 100 Hz 那一档的 KC（这种气味的“身份”），不随浓度换组。全脑模型里糖/苦味觉神经元点不亮多巴胺神经元，所以“味觉 → 多巴胺”这一步是规则。</p>
@@ -434,7 +436,7 @@
 <p><b>在地图里连续活 30 分钟</b>（16 张图，只数站在坏果子上尝到的那几次，发霉的好糖另算）：学习开时尝到坏果子 <b>200</b> 次、学习关 <b>473</b> 次；被坏果子的果香骗过去追 <b>27</b> 次 vs <b>153</b> 次；进食 1400 vs 1334 次。逐张图看并不整齐：10 张学习开时尝得更少、2 张一样、4 张反而更多——同一张图开/关学习后轨迹很快分叉，单张图的波动很大，要看总数。</p>
 <p><b>醋味有没有被连累</b>：会，但几乎都是<b>霉斑</b>造成的，不是坏果子。霉斑可以长在糖上或糖旁边，踩到它尝到苦的那一刻正闻着醋味，醋味就跟着被记坏一点，吃到糖再补回来。坏果子离好糖够远：在醋味掉得最低的 3 张图里，46 次坏果子惩罚只有 1 次闻得到醋味。每一步都记下来的话，16 只里醋味 U 的最低值是 <b>0.21</b>；有 3 只曾掉到 0.3 以下（那段时间它不追醋味），加起来 85 秒 / 共 480 分钟。</p>
 <p><b>远处出发找食物</b>（离所有糖 ≥ 12 格，160 次）：关嗅觉中位 23.9 秒（90 秒没找到 30 次）；开嗅觉、没学过 27.5 秒（28 次）；开嗅觉、学过 23.4 秒（24 次）。<b>如实说：嗅觉在这项上帮助不大，学没学过也看不出差别。</b>学过和没学过是同一批起点配对跑的：160 对里 117 对用时完全一样，剩下的 22 对学过的更快、21 对更慢——中位数那点差别只是少数几次拉出来的。（以前的版本在 4 张图上测过嗅觉帮助更大，25.6 vs 38.9 秒，那时坏果子紧挨着好糖，追错了也能顺带吃到；地图规则改了以后这个便宜没了。）学习省下的是反复回去尝坏果子的时间，而不是第一次找到食物的时间。</p>
-<p><b>黑影逃跑</b>（黑影放在果蝇旁 1.5~4 格，每种 18 次）：快速拍下时，黑影在左/右/正前方都是全部起飞（18/18、18/18、18/18），起飞时间中位约 0.18 秒，通常先在 0.1 秒左右转身再起飞；转身方向全部背对黑影（30/30）。黑影在正后方时只有 8/18 起飞——那是复眼数据里的盲区。慢慢压时只有约 26/54 在手快压到时起飞、从不转身：DNp02、DNp11 只认逼近速度，慢慢压不够快。</p>
+<p><b>黑影逃跑</b>（黑影放在果蝇旁 1.5~4 格，每种 18 次）：快速拍下时，黑影在左/右/正前方都是全部起飞（18/18、18/18、18/18），起飞时间中位约 0.19 秒；起飞之前通常先有一下反应——26 次先刹住、要转身，28 次先愣住，0 次直接起飞；打算转的方向全部背对黑影（36/36）。黑影在正后方时只有 11/18 起飞——那是复眼数据里的盲区。慢慢压时只有约 32/54 在手快压到时起飞、从不先吓一跳：DNp02、DNp11 只认逼近速度，慢慢压不够快。</p>
 <p>卡死保护（6 秒没走出 0.3 格就强制换方向）在 8 只 × 15 分钟里触发 0 次。</p>
 
 <h3>简化与假设</h3>
@@ -449,6 +451,7 @@
 <li><b>嗅觉</b>：Semmelhack &amp; Wang 2009（醋味嗅小球）；Stensmyr et al. 2012（geosmin → DA2）；Álvarez-Salvado et al. 2018（步行果蝇逆风追踪）。</li>
 <li><b>应用图标</b>：用代码画的（两只复眼 + 指南针环），不含第三方图片。</li>
 <li><b>逃跑与倒退</b>：Ache et al. 2019（LC4 编码逼近速度、LPLC2 编码大小，汇到巨纤维）；von Reyn et al. 2014（巨纤维与起飞方式）；Bidaye et al. 2014（MDN 与倒退走）。</li>
+<li><b>动作</b>：Cook 1979（Biol Cybern，求偶追随：速度按距离调，贴到身后 3~4 mm）；Rayshubskiy et al. 2025（eLife）、Yang et al. 2024（Cell）：两侧 DNa02 之差与转速成正比；Collie et al. 2025（LC10a → AOTU → DNa02 的追随通路）；Zacarias et al. 2018（Nat Commun，受惊先停再跑、走得慢更容易愣住、DNp09）；Gibson et al. 2015（Curr Biol，接连受惊后的持续防御状态）；Wu et al. 2016（eLife）、Sen et al. 2017（Curr Biol）：LC16 → MDN 倒退；Card &amp; Dickinson 2008（起飞速度与准备动作）；Muijres et al. 2014（Science，逃跑飞行的侧倾急转）；Mendes et al. 2013、DeAngelis et al. 2019（eLife，步态与步频）；Geurten et al. 2014、Strauss &amp; Heisenberg 1990（走路时的转身与起停）。</li>
 <li><b>盯住小目标（LC10a）</b>：Ribeiro et al. 2018（Cell，LC10a 与求偶追逐）；Hindmarsh Sten et al. 2021（Nature，性唤起开关视觉追逐）。</li>
 <li><b>聚到有同伴的食物上</b>：Lihoreau et al. 2016（J Exp Biol，食物斑块的集体选择）；Tinette et al. 2004（Genes Brain Behav）；Sun et al. 2020（Nat Commun，靠近不动的同伴，视觉或嗅觉都够）。</li>
 <li><b>cVA</b>：Bartelt et al. 1985（J Chem Ecol，聚集信息素）；Kurtovic et al. 2007（Nature，Or67d）；Lebreton et al. 2014、2015（Sci Rep，交配与饥饿对 cVA 吸引的调节）；Das et al. 2017（PNAS，cVA 与食物气味在 DA1 的协同）；Duménil et al. 2016（J Chem Ecol，交配雌蝇在产卵处留下 cVA）。</li>
@@ -845,7 +848,7 @@ function steer(goalEPG, noise){
     sum[side] = tot; }
   // 接线图:PFL3 左 → DNa02 右,PFL3 右 → DNa02 左(交叉)。DNa02 驱动同侧转身(Rayshubskiy 2020)
   const dnL = sum.R, dnR = sum.L, diff = dnL - dnR + noise;
-  return { dnL, dnR, turn: diff > 4 ? 1 : diff < -4 ? -1 : 0 };
+  return { dnL, dnR, diff, turn: diff > 4 ? 1 : diff < -4 ? -1 : 0 };
 }
 
 /* ─────────── 味觉查表(全脑 LIF 离线结果,双线性插值) ─────────── */
@@ -1002,6 +1005,18 @@ const isWall = (x, y) => { const k = tileAt(x, y); return k < 0 || world.wall[k]
 
 /* ─────────── 果蝇 ─────────── */
 const SPEED = 5;                                // 格/秒 ≈ 10 mm/s
+/* ⚙ 动作层(只用在 追着另一只 / 凑过去 / 吓一跳 / 愣住,以及刚离开这几个状态的 1 秒里)
+   转速 = DNa02 左右差 / MOT_DSAT(饱和),经 MOT_TAU 平滑;速度按加速度上限变化。数值依据见说明里“动作”那段。 */
+const MOT_DSAT = 8, MOT_TAU = .12, ACC = 45, DEC = 70, ACC_ESC = 100;   // 格/s²:起步 ≈ 90 mm/s²、刹车 ≈ 140 mm/s²、逃跑冲刺 ≈ 200 mm/s²
+const CHASE_KV = 5, CHASE_D0 = 2;                 // 追:速度 = 5/s × (中心距 − 2 格 = 4 mm)(Cook 1979:k ≈ 5/s,贴到身后约 3~4 mm)
+const MOTOR = st => st === "chase" || st === "join" || st === "startle" || st === "freeze";
+const gauss = R => (R() + R() + R() + R() - 2) * 1.732;           // 近似标准正态
+function penPulse(dt, graded){                          // 连续的转身 → 给罗盘环的 ±1 脉冲(环的 PEN 输入只在 ±1 附近标定过;小于 1 推不动峰,大于 1 会把峰冲散)
+  fly.penOwe = (fly.penOwe || 0) + graded * TURN * dt;
+  if (!fly.penOn && Math.abs(fly.penOwe) > .12) fly.penOn = Math.sign(fly.penOwe);   // 攒够约 7° 才开始还,一段至少约 40 ms
+  if (!fly.penOn) return 0;
+  const q = fly.penOn; fly.penOwe -= q * TURN * dt; if (fly.penOwe * q <= 0) fly.penOn = 0; return q; }
+function freezeP(v){ const x = Math.max(0, Math.min(1, (v - 1) / 6.5)); return .77 - .5 * x; }   // Zacarias 2018:走得 < 2 mm/s 时 77% 愣住,> 15 mm/s 时 27%
 let fly, trail, logs, sunOn = true, sunAz = 60*Math.PI/180, paused = false;
 let SUN_REF = sunAz;   // 果蝇心里“太阳在哪”是出生那一刻定的;之后挪太阳,它的估计会跟着偏 —— 那就是太阳罗盘
 function newFly(){
@@ -1012,7 +1027,7 @@ function newFly(){
           cA: 0, cB: 0, rAL: 0, rAR: 0, rB: 0, pn: new Float64Array(NGL + 1), smellA: false, smellB: false, trop: 0,
           odor: null, surgeCool: 0, avoidCool: 0, egoUp: 0,
           cC: 0, rA: 0, rC: 0, rCL: 0, rCR: 0, smellC: false, pnC: cpnAt(0), UA: 1, UC: 1, Umix: 0, kcA: 0, kcC: 0,
-          flight: null, escCool: 0, tkCool: 0, fastT: 0, backT: 0, loomTh: 0, ls: null, chase: null, chaseCool: 5, chases: 0, lc: null, lcAz: null, join: null, joinCool: 5, joins: 0, pStill: 0, pPrev: null,
+          flight: null, escCool: 0, tkCool: 0, fastT: 0, backT: 0, v: 5, vEma: 5, turnS: 0, nz: 0, rampT: 0, esc: null, arousal: 0, loomTh: 0, ls: null, chase: null, chaseCool: 5, chases: 0, lc: null, lcAz: null, join: null, joinCool: 5, joins: 0, pStill: 0, pPrev: null,
           simT: 0, odo: 0, sugar: 0, badTastes: 0, takeoffs: 0, startles: 0, visited: new Uint8Array(G * G), visitedN: 0 };
   trail = []; X = new Float64Array(N); SUN_REF = sunAz; mbT = 0; mbHist = []; mbHistT = 0;
   for (let i = 0; i < 150; i++) ringStep(wrap(sunAz - fly.h), 1, 0);
@@ -1120,7 +1135,7 @@ function lc10Sense(dt, pref){
   }
   if (!best) return o;
   o.tgt = best.pr; o.d = best.d; o.az = best.az; o.drive = best.drive;
-  const fL = 1 / (1 + Math.exp(-o.az / .08));                                 // 偏左 ⇒ 左眼;正前方两只眼各一半
+  const fL = 1 / (1 + Math.exp(-o.az / .25));                                 // 偏左 ⇒ 左眼;⚙ 为了转得平滑,左右分配在正前方约 ±30° 里渐变(真实双眼重叠约 15°)
   o.L = o.drive * fL; o.R = o.drive * (1 - fL);
   o.dnL = lookup2(LCT.L, o.L, o.R); o.dnR = lookup2(LCT.R, o.L, o.R); o.bias = CHASE_K * (o.dnL - o.dnR);
   return o;
@@ -1147,7 +1162,9 @@ function loomSense(dt){
   const objs = [];
   if (loom) objs.push({ x: loom.x, y: loom.y, z: loom.z, R: LOOM_R, key: "loomTh" }); else fly.loomTh = 0;
   if (!fly.pthM) fly.pthM = new Map();                   // 别的果蝇:8 格(16 mm)以外张角太小、不算;墙挡住了也看不见
+  const tgt = (fly.state === "chase" || fly.state === "join") ? ((fly.chase && fly.chase.tgt) || (fly.join && fly.join.tgt)) : null;
   for (const pr of fly.others || []){ const pd = Math.hypot(pr.x - fly.x, pr.y - fly.y);
+    if (pr === tgt && (pr.v || 0) * Math.cos(wrap(pr.h - Math.atan2(fly.y - pr.y, fly.x - pr.x))) < .6 * SPEED){ fly.pthM.delete(pr); continue; }   // ⚙ 正在追/凑的那只:它没朝自己冲过来,变大是自己走近造成的,不算威胁
     if (!pr.flight && pd < 8 && rayDist(Math.atan2(pr.y - fly.y, pr.x - fly.x), pd + .3) > pd) objs.push({ x: pr.x, y: pr.y, z: .5, R: .6, key: pr }); else fly.pthM.delete(pr); }
   let best = 0;
   for (const ob of objs){
@@ -1221,12 +1238,20 @@ function takeoff(est, R, src){
   for (const da of [0, .4, -.4, .8, -.8, 1.2, -1.2]) for (let dd = D; dd >= 2.5; dd -= .5){
     const x1 = fly.x + Math.cos(aw + da) * dd, y1 = fly.y + Math.sin(aw + da) * dd;
     if (x1 < 1.2 || y1 < 1.2 || x1 > G - 1.2 || y1 > G - 1.2 || isWall(x1, y1)) continue;
-    fly.flight = { x0: fly.x, y0: fly.y, x1, y1, t: 0, T: .25 + .025 * dd, aw: aw + da }; return true; }
+    const sg = R() < .5 ? 1 : -1, bend = dd * (.12 + .18 * R()), mx = (fly.x + x1) / 2 - Math.sin(aw + da) * bend * sg, my = (fly.y + y1) / 2 + Math.cos(aw + da) * bend * sg;
+    const cx_ = isWall(mx, my) ? (fly.x + x1) / 2 : mx, cy_ = isWall(mx, my) ? (fly.y + y1) / 2 : my;   // 控制点落在墙里就走直线
+    fly.flight = { x0: fly.x, y0: fly.y, x1, y1, cx: cx_, cy: cy_, h0: fly.h, t: 0, T: .25 + .025 * dd, aw: aw + da, awEnd: Math.atan2(y1 - cy_, x1 - cx_) }; return true; }
   return false;
 }
-function flyFlight(dt, est){                              // 飞行中:沿直线插值;路径积分按“它以为的朝向”转换位移
+function flyFlight(dt, est){                              // 飞行中:沿一条略弯的路线;路径积分按“它以为的朝向”转换位移
   const f = fly.flight, p0 = Math.min(1, f.t / f.T); f.t += dt; const p1 = Math.min(1, f.t / f.T);
-  const ddx = (f.x1 - f.x0) * (p1 - p0), ddy = (f.y1 - f.y0) * (p1 - p0), dl = est - fly.h;
+  const cx0 = f.cx ?? (f.x0 + f.x1) / 2, cy0 = f.cy ?? (f.y0 + f.y1) / 2;
+  const ease = p => 1 - (1 - p) * (1 - p) * (1 - .35 * p);                  // 起跳最快,落地前慢下来
+  const B = (u, a, c, b) => (1 - u) * (1 - u) * a + 2 * (1 - u) * u * c + u * u * b, s0 = ease(p0), s1 = ease(p1);
+  const ddx = B(s1, f.x0, cx0, f.x1) - B(s0, f.x0, cx0, f.x1), ddy = B(s1, f.y0, cy0, f.y1) - B(s0, f.y0, cy0, f.y1), dl = est - fly.h;
+  if (dt > 0 && p1 > .18){                                  // 跳出去以后:侧倾转弯,把身体转到飞的方向(转速上限约 900°/s)
+    const tx = 2 * (1 - s1) * (cx0 - f.x0) + 2 * s1 * (f.x1 - cx0), ty = 2 * (1 - s1) * (cy0 - f.y0) + 2 * s1 * (f.y1 - cy0), dh = wrap(Math.atan2(ty, tx) - fly.h);
+    const w = Math.max(-15.7 * dt, Math.min(15.7 * dt, dh)); fly.h = wrap(fly.h + w); fly.flTurn = w / dt / TURN; } else fly.flTurn = 0;
   fly.x += ddx; fly.y += ddy; fly.odo += Math.hypot(ddx, ddy); fly.path += Math.hypot(ddx, ddy);
   fly.px += ddx * Math.cos(dl) - ddy * Math.sin(dl); fly.py += ddx * Math.sin(dl) + ddy * Math.cos(dl);
   { const w = PLUME.windAt(fly.x, fly.y);                   // ⚙ 飞在空中会被风吹偏(带阵风 ⇒ 轨迹是弯的);它自己不知道,路径积分不算这一段
@@ -1234,7 +1259,7 @@ function flyFlight(dt, est){                              // 飞行中:沿直线
   if (p1 >= 1 && isWall(fly.x, fly.y)){                  // 飞的途中有人在落点画了墙:挪到最近的空地
     let best = null; for (let r = .5; r < 4 && !best; r += .5) for (let a = 0; a < 6.28; a += .4){ const x = fly.x + r * Math.cos(a), y = fly.y + r * Math.sin(a); if (!isWall(x, y)){ best = [x, y]; break; } }
     if (best){ fly.x = best[0]; fly.y = best[1]; } }
-  if (p1 >= 1){ fly.flight = null; fly.tkCool = 1.5; fly.escCool = 1.5; fly.goal = wrap(est + f.aw - fly.h); fly.runT = 2; setState("explore"); log("落地，继续走"); }
+  if (p1 >= 1){ fly.flight = null; fly.tkCool = 1.5; fly.escCool = 1.5; fly.goal = wrap(est + (f.awEnd ?? f.aw) - fly.h); fly.runT = 2; fly.v = .3 * SPEED; fly.rampT = 1; setState("explore"); log("落地，继续走"); }
 }
 
 const STATES = {
@@ -1249,9 +1274,10 @@ const STATES = {
   flee:    ["起飞逃跑", "黑影逼近 → 巨纤维（DNp01）放电 → 腿一蹬起飞，往远离黑影的方向飞开", "🧠 接线图 + ⚙ 动作"],
   join:    ["凑过去", "看见另一只停着不动（多半在吃）→ 走过去，到了就在附近兜圈找吃的；往哪转由 LC10a → DNa02 决定，要不要去是规则", "🧠 接线图 + ⚙ 规则"],
   chase:   ["追着另一只", "LC10a 盯住视野里那个会动的小暗点 → 全脑模型查表得到两侧 DNa02 → 往它那边转；想不想追、追多快是规则", "🧠 接线图 + ⚙ 规则"],
-  startle: ["吓了一跳", "黑影那一侧的下行神经元 DNp02/DNp11 放电，巨纤维还没到阈值 → 转身往反方向快跑", "🧠 接线图 + ⚙ 动作"],
+  startle: ["吓了一跳", "黑影那一侧的下行神经元 DNp02/DNp11 放电，巨纤维还没到阈值 → 先刹住停一下、原地转到背对它，再冲出去、慢慢降回平常的速度", "🧠 接线图 + ⚙ 动作"],
+  freeze:  ["愣住了", "受惊后停住不动（走得越慢越容易愣住，真实里由下行神经元 DNp09 管；这里是规则），过一会儿再转身走开", "🧠 接线图 + ⚙ 动作"],
 };
-function setState(s){ if (fly.state === s) return; if (s !== "chase" && s !== "wall") fly.chase = null; if (s !== "join" && s !== "wall" && fly.join){ fly.join = null; fly.joinCool = Math.max(fly.joinCool, 6); } fly.state = s; fly.st = 0;
+function setState(s){ if (fly.state === s) return; if (s !== "chase" && s !== "wall") fly.chase = null; if (s !== "startle" && s !== "freeze") fly.esc = null; if (s !== "join" && s !== "wall" && fly.join){ fly.join = null; fly.joinCool = Math.max(fly.joinCool, 6); } fly.state = s; fly.st = 0;
   if (isFoc()) showState(); }                            // 只有“正在看”的那只改界面(以前二号换状态也会改写“正在做”)
 function showState(){                                    // “正在做”那一栏:setState 和换果蝇都走这里
   let [n, why, brain] = STATES[fly.state] || STATES.explore;
@@ -1293,7 +1319,7 @@ function flyStep(dt, R){
   fly.pnC = cpnAt(fly.rC); fly.smellC = (fly.pnC.DM6 + fly.pnC.DL1) / 2 > SMELL_A;
   // 黑影逼近:视觉 → LC4/LPLC2 → 下行神经元(查表)→ 起飞 / 转身跑
   if (!fly.secondary) loomStep(dt); const ls = fly.ls = loomSense(dt);
-  if (fly.flight){ flyFlight(dt, est); fly.turn = 0; fly.dnL = fly.dnR = 0; ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, 0); return { b, est }; }
+  if (fly.flight){ flyFlight(dt, est); fly.turn = 0; fly.dnL = fly.dnR = 0; ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, penPulse(dt, fly.flTurn || 0)); return { b, est }; }
   if (ls.src){
     const gf = Math.max(ls.gfL, ls.gfR), who = ls.src.peer ? "另一只果蝇冲过来" : "黑影";
     if (gf > GF_TH && fly.tkCool <= 0 && takeoff(est, R, ls.src)){     // 起飞:只受上一次落地后的冷却限制,转身途中也能接着起飞
@@ -1301,14 +1327,29 @@ function flyStep(dt, R){
       log(`<b>起飞逃跑</b>（${who}）：巨纤维 ${gf|0} Hz（LC4 ${Math.max(ls.lc4L, ls.lc4R)|0} / LPLC2 ${Math.max(ls.lpL, ls.lpR)|0} Hz）`);
       flyFlight(0, est); ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, 0); return { b, est };
     }
-    if (Math.max(ls.dL, ls.dR) > 2 * DN_TH && fly.escCool <= 0 && fly.state !== "startle" && fly.state !== "feed"){
+    if (Math.max(ls.dL, ls.dR) > 2 * DN_TH && fly.escCool <= 0 && fly.state !== "startle" && fly.state !== "freeze" && fly.state !== "feed"){
       // +1 = 左侧的 DN 更强 = 黑影在左边 ⇒ 往右转;两侧几乎一样(黑影在正前方/正上方)时看它偏左还是偏右
       const side = Math.abs(ls.dL - ls.dR) > 5 ? (ls.dL > ls.dR ? 1 : -1) : (ls.fy >= 0 ? 1 : -1);
-      fly.goal = wrap(est - side * 1.9); fly.fastT = 1.2; fly.escCool = 2; fly.startles++; fly.srch = null; fly.odor = null; setState("startle");
-      log(`<b>吓了一跳</b>（${who}）：${side > 0 ? "左" : "右"}侧 DNp02+DNp11 ${Math.max(ls.dL, ls.dR)|0} Hz，巨纤维 ${gf|0} Hz 没到起飞阈值 → 往${side > 0 ? "右" : "左"}转身快跑`);
+      const azT = wrap(Math.atan2(ls.src.y - fly.y, ls.src.x - fly.x) - fly.h);   // 黑影在身体的哪个方位(左为正;视觉上 LC4/LPLC2 是按方位排的)
+      let turnBy = -side * Math.max(0, Math.PI - Math.abs(azT));                 // 转到背对它
+      if (Math.abs(turnBy) < 1.2) turnBy = 0; else turnBy += (R() - .5) * .7;    // 已经大致背对着(差 < 70°):不转,直接跑(Zacarias 2018);否则 ±20° 的随意
+      const frontal = Math.abs(azT) < .52, a0 = fly.arousal, pF = Math.min(.9, freezeP(fly.vEma) * (1 + .3 * Math.min(2, a0)) * (ls.src.peer ? .5 : 1));   // ⚙ 被别的果蝇吓到时愣住的机会减半(实测的愣住比例是用黑色圆盘量的)
+      fly.arousal += 1;
+      const frz = R() < pF ? Math.max(1, Math.min(6, 1.8 * Math.exp(.6 * gauss(R)))) : 0;     // ⚙ 愣住多久:1~6 秒,中位约 2 秒(真实常常更久,游戏里截短了)
+      fly.goal = wrap(est + turnBy); fly.escCool = 2; fly.startles++; fly.srch = null; fly.odor = null;
+      fly.esc = { t: 0, pause: R() < .5 ? .16 + .24 * R() : .08, peak: Math.max(1.05, Math.min(2, 1.35 * Math.exp(.3 * gauss(R)))), frz, run: false, rt: 0, dir: Math.sign(turnBy), a0 };
+      if (frontal && !frz) fly.backT = .45 + .3 * R(); else if (frz) fly.backT = 0;   // 黑影在正前方:先倒退几步(LC16 → MDN);愣住就站着不动
+      setState(frz ? "freeze" : "startle");
+      const dir = turnBy === 0 ? "背对着它，不用转" : `往${turnBy < 0 ? "右" : "左"}转 ${Math.round(Math.abs(turnBy) * 180 / Math.PI)}°`;
+      log(`<b>吓了一跳</b>（${who}）：${side > 0 ? "左" : "右"}侧 DNp02+DNp11 ${Math.max(ls.dL, ls.dR)|0} Hz，巨纤维 ${gf|0} Hz 没到起飞阈值 → ` +
+        (frz ? `愣住了（约 ${frz.toFixed(1)} 秒），然后${dir}走开` : `${frontal ? "先倒退几步，" : ""}刹住、${dir}，再冲出去`));
     }
   }
-  if (fly.state === "startle" && fly.fastT <= 0) setState(back());
+  if (fly.esc){ const e = fly.esc; e.t += dt;                                   // 吓一跳的几个阶段
+    if (fly.state === "freeze"){ if (e.t >= e.frz){ e.t = 0; e.frz = 0; e.pause = .05; e.peak = 1 + (e.peak - 1) * .6; setState("startle"); fly.esc = e; } }
+    else if (fly.state === "startle"){
+      if (!e.run && e.t > e.pause && !(fly.backT > 0) && (Math.abs(wrap(fly.goal - est)) < .45 || e.t > e.pause + .9)){ e.run = true; e.rt = 0; }
+      if (e.run){ e.rt += dt; if (e.rt > 2.8){ fly.esc = null; setState(back()); } } } }
   // 看见另一只 → 追着它:🧠 LC10a → DNa02(查表)管往哪转;⚙ 什么时候开始追、什么时候放弃是规则
   const lc = fly.lc = lc10Sense(dt, (fly.join && fly.join.tgt) || (fly.chase && fly.chase.tgt) || null); fly.chaseCool = Math.max(0, fly.chaseCool - dt);
   const ws = wallSense(dt), cv = cvaSense(dt);
@@ -1332,7 +1373,7 @@ function flyStep(dt, R){
       log(why === "到了" ? `凑到另一只旁边了（走了 ${j.el.toFixed(1)} 秒），在附近兜圈找吃的` : `不凑过去了：${why}`); }
   } else if ((fly.state === "explore" || fly.state === "search" || fly.state === "cast") && fly.hunger > .3 && fly.joinCool <= 0 && lc.jc &&
              R() < dt * 1.5){   // 对方一顿只吃几秒 ⇒ 看见了就大多在一秒内动身(lc.jc 在 lc10Sense 里挑:停着 >0.5 秒、看得清、2.2~10 格)
-    const jc = lc.jc, fL = 1 / (1 + Math.exp(-jc.az / .08));
+    const jc = lc.jc, fL = 1 / (1 + Math.exp(-jc.az / .25));
     fly.join = { el: 0, lost: 0, tgt: jc.pr }; fly.srch = null; fly.odor = null; fly.joins++; setState("join");
     log(`<b>看见另一只停在那儿</b>（多半在吃）：LC10a 左 ${jc.drive * fL | 0} / 右 ${jc.drive * (1 - fL) | 0} Hz → 凑过去`);
   }
@@ -1342,7 +1383,8 @@ function flyStep(dt, R){
     const why = c.lost > 1.2 ? "跟丢了" : (c.bumps || 0) > 2 ? "被墙挡住了" : c.el > 18 ? "没兴趣了" : fly.hunger > .6 ? "饿了，不追了" : "";
     if (why){ fly.chase = null; fly.chaseCool = 10 + 10 * R(); fly.runT = 3; if (fly.state === "chase") setState(fly.odor ? fly.odor.mode : fly.srch ? "search" : "explore");
       log(`${why}（追了 ${c.el.toFixed(1)} 秒）`); }
-  } else if (!fly.join && (fly.state === "explore" || fly.state === "search") && fly.hunger < .45 && fly.chaseCool <= 0 && lc.drive > LC10_TH && lc.d > 2 && lc.d < 12 && R() < dt * .8){
+  } else if (!fly.join && (fly.state === "explore" || fly.state === "search") && fly.hunger < .45 && fly.chaseCool <= 0 && lc.drive > LC10_TH && lc.d > 2 && lc.d < 12 &&
+             !(lc.tgt && lc.tgt.chase && lc.tgt.chase.tgt === fly) && R() < dt * .8){   // ⚙ 对方正在追自己:不回头追它
     fly.chase = { el: 0, lost: 0, tgt: lc.tgt }; fly.srch = null; fly.chases++; setState("chase");
     log(`<b>看见另一只</b>：LC10a 左 ${lc.L|0} / 右 ${lc.R|0} Hz → 跟上去（DNa02 ${lc.dnL|0} / ${lc.dnR|0} Hz）`);
   }
@@ -1368,10 +1410,10 @@ function flyStep(dt, R){
       fly.goal = wrap(est + (R() - .5) * 2.4);
       setState("search"); log(`${fly.smellB ? "闻到霉味，停下不吃了" : fly.hunger < 0.05 ? "吃饱了" : "这格吃光了"}（饥饿 ${fly.hunger.toFixed(2)}），开始在附近兜圈找`);
     }
-  } else if (fly.rate > 60 && fly.hunger > 0.2 && fly.fullT <= 0 && !fly.smellB){   // ⚙ 霉味在场不吃(Stensmyr 2012)
+  } else if (!fly.esc && fly.rate > 60 && fly.hunger > 0.2 && fly.fullT <= 0 && !fly.smellB){   // ⚙ 霉味在场不吃(Stensmyr 2012);受惊的时候先跑
     fly.odor = null; setState("feed"); fly.fed++; log(`<b>伸口器</b>：糖 ${fly.s|0} / 苦 ${fly.b|0} Hz → 进食神经元 ${fly.rate|0} Hz`);
     mbEvent("rew", fly.hunger, "吃到糖，饥饿 " + fly.hunger.toFixed(2));          // 奖励强度随饥饿(饱的果蝇几乎学不到糖)
-  } else if (fly.b > 40 && (fly.rate <= 60 || fly.smellB) && fly.rejT <= 0 && fly.state !== "reject"){
+  } else if (!fly.esc && fly.b > 40 && (fly.rate <= 60 || fly.smellB) && fly.rejT <= 0 && fly.state !== "reject"){
     // 只在“味觉查表说不吃”或“闻到霉味”时拒绝;光是不饿、刚吃完,而查表说能吃,就不算拒绝,也不罚
     // ⚙ 往“脚下更不苦”的方向走:用四邻格的苦味差估方向(足上的味觉感受器能分辨左右前后)
     const bt = (dx, dy) => { const kk = tileAt(fly.x + dx, fly.y + dy); return kk < 0 || world.wall[kk] ? 250 : world.bit[kk]; };
@@ -1391,7 +1433,7 @@ function flyStep(dt, R){
   { const wA = fly.smellA ? fly.rA : 0, wC = fly.smellC ? fly.rC : 0; fly.Umix = wA + wC > 0 ? (wA * fly.UA + wC * fly.UC) / (wA + wC) : 0; }
   const attractive = (fly.smellA && fly.UA >= .3) || (fly.smellC && fly.UC >= .3);
   // ⚙ 气味行为(规则,按 Álvarez-Salvado 2018 的步行果蝇逆风追踪 / Stensmyr 2012 的霉味回避);“闻到没有”由上面的 PN 查表决定
-  if (fly.state !== "feed" && fly.state !== "reject"){
+  if (fly.state !== "feed" && fly.state !== "reject" && !fly.esc){
     if (fly.smellB && fly.avoidCool <= 0 && (!fly.odor || fly.odor.mode !== "avoid")){
       fly.odor = { mode: "avoid", el: 0, quiet: 0, dev: (R() - .5) * 1.2, wallSide: R() < .5 ? 1 : -1 }; fly.srch = null;
       fly.goal = wrap(est + egoUp + Math.PI + (R() - .5) * 1.2);           // 往下风走
@@ -1479,16 +1521,44 @@ function flyStep(dt, R){
 
   // ③ 转向:目标只以“FC2 上的一个峰”进入大脑;往哪转由 PFL3→DNa02 决定,不是规则
   //   目标在 EPG 坐标里 = SUN_REF − goal(与 est = SUN_REF − 峰 同一套换算)
-  if (!feeding){ const sgn = steer(wrap(SUN_REF - fly.goal), (R() - .5) * 6 + fly.trop + (fly.state === "chase" || fly.state === "join" ? lc.bias : 0) + (fly.state === "wall" ? 0 : ws.bias) + (fly.cvaOn ? CVA_TROP * (cv.pL - cv.pR) : 0)); fly.turn = sgn.turn; fly.dnL = sgn.dnL; fly.dnR = sgn.dnR; }
-  else { fly.turn = 0; fly.dnL = fly.dnR = 0; }
+  const motor = MOTOR(fly.state);
+  if (motor){ fly.nz += -fly.nz * dt / .3 + 1.2 * Math.sqrt(2 * dt / .3) * gauss(R); fly.rampT = 1; } else fly.rampT = Math.max(0, fly.rampT - dt);
+  if (!feeding){ const sgn = steer(wrap(SUN_REF - fly.goal), (motor ? fly.nz : (R() - .5) * 6) + fly.trop + (fly.state === "chase" || fly.state === "join" ? lc.bias : 0) + (fly.state === "wall" ? 0 : ws.bias) + (fly.cvaOn ? CVA_TROP * (cv.pL - cv.pR) : 0));
+    fly.dnL = sgn.dnL; fly.dnR = sgn.dnR;
+    if (motor){ const wmax = fly.state === "startle" ? 2 : 1, e = fly.esc, err = wrap(fly.goal - est);
+      const cmd = fly.state === "freeze" ? 0
+        : fly.state === "startle" && e && !e.run ? (fly.backT > 0 ? 0 : (Math.abs(err) > 2.8 ? e.dir || Math.sign(err) : Math.sign(err)) * Math.min(2, 2.5 * Math.abs(err)))   // 逃跑转身:先退完再转;方向来自 DNp02/DNp11 那一侧,转速按剩下的角度(⚙ 剩得多转得快,快到时慢下来)
+        : Math.max(-wmax, Math.min(wmax, sgn.diff / MOT_DSAT));
+      fly.turnS += (cmd - fly.turnS) * Math.min(1, dt / MOT_TAU); fly.turn = Math.abs(fly.turnS) < .004 ? 0 : fly.turnS; }   // 🧠 转速 ∝ DNa02 左右差(约 150 ms 后);⚙ 饱和与平滑
+    else { fly.turn = sgn.turn; fly.turnS = sgn.turn; } }
+  else { fly.turn = 0; fly.turnS = 0; fly.dnL = fly.dnR = 0; }
   fly.h = wrap(fly.h + fly.turn * TURN * dt);
-  ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, fly.turn);
+  let pen = fly.turn;                                      // 普通状态:三档转身直接喂给环(和以前一样)
+  if (motor) pen = penPulse(dt, fly.turn);
+  else if (fly.penOwe || fly.penOn){ if (fly.turn){ fly.penOwe = 0; fly.penOn = 0; } else pen = penPulse(dt, 0); }   // 刚离开动作层:把剩下的账还完(又开始三档转身就不还了)
+  ringStep(wrap(sunAz - fly.h), sunOn ? P.sunAmp : 0, pen);
 
   // ④ 移动
   if (!feeding){
-    const v = SPEED * (fly.turn ? 0.35 : 1) * (fly.fastT > 0 ? 1.8 : 1)    // ⚙ 转身时放慢;吓一跳后快跑
-      * (fly.state === "chase" ? Math.max(.12, Math.min(1.3, (lc.d - 1.6) / 1.2)) : 1);   // ⚙ 追的时候:远了快追,近了慢下来、贴着看
-    const nx = fly.x + Math.cos(fly.h) * v * dt, ny = fly.y + Math.sin(fly.h) * v * dt;
+    let v = SPEED * (fly.turn ? 0.35 : 1);                                // ⚙ 转身时放慢(普通状态:瞬间换档,和以前一样)
+    if (motor || fly.rampT > 0){                                              // ⚙ 动作层:先算想要的速度,再按加速度上限变过去
+      const tw = 1 - .5 * Math.min(1, Math.abs(fly.turn));                    //   转得越快走得越慢(多数转身是原地转,Yang 2024)
+      let vT = motor ? SPEED * tw : v, acc = ACC;
+      if (fly.state === "chase") vT = Math.max(0, Math.min(1.3 * SPEED, CHASE_KV * (lc.d - CHASE_D0))) * tw;   // Cook 1979
+      else if (fly.state === "freeze") vT = 0;
+      else if (fly.state === "startle" && fly.esc){ const e = fly.esc;
+        if (!e.run) vT = .08 * SPEED;                                          // 刹住、停一小下(同时原地转)
+        else { const base = SPEED * (1 + .15 * Math.min(1, e.a0 || 0)); vT = (base + (e.peak * SPEED - base) * Math.exp(-Math.max(0, e.rt - .8) / 1)) * tw; acc = ACC_ESC; } }   // ⚙ 冲到最快后保持约 0.8 秒,再慢慢降回来
+      fly.v += Math.max(-DEC * dt, Math.min(acc * dt, vT - fly.v)); v = Math.max(0, fly.v);
+      let vsT = 0;                                                             // ⚙ 横着挪:贴近一只不怎么动的果蝇时,绕着它慢慢转到侧面(方向每 2~4 秒换一次)
+      if (fly.state === "chase" && lc.tgt && lc.d < CHASE_D0 + .6 && (lc.tgt.v || 0) < 1){ fly.circT = (fly.circT || 0) - dt;
+        if (fly.circT <= 0){ fly.circT = 2 + 2 * R(); fly.circDir = R() < .5 ? 1 : -1; } vsT = .7 * (fly.circDir || 1); }
+      fly.vs = (fly.vs || 0) + Math.max(-DEC * dt, Math.min(ACC * dt, vsT - (fly.vs || 0)));
+    } else fly.v = v;
+
+    const vs = (motor || fly.rampT > 0) ? (fly.vs || 0) : 0;                   // 横向速度(左为正),只在动作层里可能不为 0
+    const nx = vs ? fly.x + (Math.cos(fly.h) * v - Math.sin(fly.h) * vs) * dt : fly.x + Math.cos(fly.h) * v * dt,
+          ny = vs ? fly.y + (Math.sin(fly.h) * v + Math.cos(fly.h) * vs) * dt : fly.y + Math.sin(fly.h) * v * dt;
     if (fly.backT > 0){                               // ⚙ 撞墙后先倒退几步(MDN):朝向不变、往后挪,同时照常转身
       fly.backT -= dt; const vb = SPEED * .45, bx = fly.x - Math.cos(fly.h) * vb * dt, by = fly.y - Math.sin(fly.h) * vb * dt;
       if (!isWall(bx, by)){ fly.x = bx; fly.y = by; fly.path += vb * dt; fly.odo += vb * dt; fly.px -= Math.cos(est) * vb * dt; fly.py -= Math.sin(est) * vb * dt; }
@@ -1505,15 +1575,19 @@ function flyStep(dt, R){
           fly.goal = wrap(est + fly.egoUp + (fly.odor.mode === "avoid" ? Math.PI : 0) + fly.odor.wallSide * Math.PI / 2); }
         else { const side = R() < .5 ? 1 : -1; fly.goal = wrap(est + side * (1.2 + R())); } }
     } else {
-      fly.x = nx; fly.y = ny; fly.path += v * dt; fly.odo += v * dt;
-      fly.px += Math.cos(est) * v * dt; fly.py += Math.sin(est) * v * dt;   // 路径积分只知道 est
+      fly.x = nx; fly.y = ny;
+      if (vs){ const sp = Math.hypot(v, vs); fly.path += sp * dt; fly.odo += sp * dt; fly.px += (Math.cos(est) * v - Math.sin(est) * vs) * dt; fly.py += (Math.sin(est) * v + Math.cos(est) * vs) * dt; }
+      else { fly.path += v * dt; fly.odo += v * dt;
+      fly.px += Math.cos(est) * v * dt; fly.py += Math.sin(est) * v * dt; }   // 路径积分只知道 est
     }
   }
 
+  if (feeding){ fly.v = 0; fly.vs = 0; }
+  fly.vEma += ((feeding ? 0 : Math.max(0, fly.v)) - fly.vEma) * Math.min(1, dt / .5); fly.arousal *= Math.exp(-dt / 15);   // 最近半秒走多快(决定愣不愣住);警觉慢慢消退
   // ⑤ 最后一道保险:不在进食、6 秒里**实际走过的路**不到 0.3 格 ⇒ 换个随机方向,并记进日志(正常应不触发)
   //   ⚠ 别用“离 6 秒前的位置多远”:局部搜索本来就在原地来回兜,净位移天然很小,会误报(第一版就这样)
   fly.wd += dt;
-  if (feeding || fly.state === "chase") fly.hist = [];   // 追着看(贴近时几乎不动)不算卡住;追最多 18 秒
+  if (feeding || fly.state === "chase" || fly.state === "freeze") fly.hist = [];   // 追着看(贴近时几乎不动)、受惊愣住都不算卡住;追最多 18 秒、愣住最多 6 秒
   if (fly.wd >= 1){ fly.wd = 0; fly.hist.push(fly.path); fly.path = 0; if (fly.hist.length > 6) fly.hist.shift();
     if (!feeding && fly.hist.length === 6 && fly.hist.reduce((a, v) => a + v, 0) < .3){
       fly.unstuck++; fly.srch = null; fly.odor = null; fly.goal = wrap(est + (R() - .5) * 2 * Math.PI); fly.runT = 5; setState("explore");
@@ -1699,6 +1773,8 @@ function mkFly3(col){
   const wg = new T.CircleGeometry(.5, 20); wg.scale(1, .34, 1); wg.translate(.5, 0, 0); wg.rotateX(-Math.PI / 2);
   const wm = new T.MeshBasicMaterial({ color: 0xe6ecf5, transparent: true, opacity: .45, side: T.DoubleSide, depthWrite: false });
   const wl = new T.Mesh(wg, wm), wr = new T.Mesh(wg, wm); wl.position.y = wr.position.y = .2; g.add(wl, wr);
+  const lgG = new T.BufferGeometry(); lgG.setAttribute("position", new T.BufferAttribute(new Float32Array(24 * 3), 3));
+  const legs = new T.LineSegments(lgG, new T.LineBasicMaterial({ color: 0xa3968a })); legs.frustumCulled = false; g.add(legs);   // 六条腿 × 两节
   const sh = new T.Mesh(new T.CircleGeometry(.7, 24), new T.MeshBasicMaterial({ color: 0, transparent: true, opacity: .35, depthWrite: false }));
   sh.rotation.x = -Math.PI / 2; sh.position.y = .04;                        // 地上的影子(不开真阴影,省电)
   const line = new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(), new T.Vector3()]),
@@ -1707,7 +1783,7 @@ function mkFly3(col){
   const tg = new T.BufferGeometry(); tg.setAttribute("position", new T.BufferAttribute(new Float32Array(1600 * 3), 3));
   const trail = new T.Line(tg, new T.LineBasicMaterial({ color: col, transparent: true, opacity: .4 })); trail.frustumCulled = false;
   V3.sc.add(g, sh, line, trail);
-  return { g, wl, wr, sh, line, trail };
+  return { g, wl, wr, sh, line, trail, legs };
 }
 function init3D(){
   const T = THREE, r = V3.r = new T.WebGLRenderer({ canvas: cv3, antialias: true });
@@ -1746,8 +1822,14 @@ function walls3D(){                                             // 墙变了(换
 }
 function place3(o, f, trail){
   const fl = f.flight ? Math.sin(Math.PI * Math.min(1, f.flight.t / f.flight.T)) : 0, [x, z] = w2t(f.x, f.y);
-  o.g.position.set(x, .23 + 3 * fl, z); o.g.rotation.y = f.h; o.g.scale.setScalar(1 + .35 * fl);   // 起飞:抬高、放大一点
+  o.g.position.set(x, .23 + 3 * fl, z); o.g.rotation.order = "YXZ"; o.g.rotation.y = f.h; o.g.scale.setScalar(1 + .35 * fl);   // 起飞:抬高、放大一点
+  o.g.rotation.x = f.flight ? -Math.max(-.6, Math.min(.6, (f.flTurn || 0) * .25)) : 0;                  // 空中转弯时往转的那边侧倾
   const wa = .4 + 1.0 * fl; o.wl.rotation.y = Math.PI - wa; o.wr.rotation.y = Math.PI + wa;          // 翅膀:平时收在背上,飞起来张开
+  if (o.legs){ gaitStep(f); const a = o.legs.geometry.attributes.position, u = .0675, tk = Math.min(1, fl * 3), k = 1 - .45 * tk; let i = 0;   // 2D 画法的坐标(右为 +x、往后为 +y)→ 模型里(往前为 +x、往右为 +z)
+    for (const [ax, ay, kx, ky, fx, fy, lift] of legPose(f)){ const A = [-(ay - 4) * u, -.06, ax * u], K = [-(ay + (ky - ay) * k - 4) * u, .02, (ax + (kx - ax) * k) * u],
+        F = [-(ay + (fy - ay) * k - 4) * u, -.22 + .1 * tk + .09 * (lift || 0), (ax + (fx - ax) * k) * u];
+      a.setXYZ(i++, ...A); a.setXYZ(i++, ...K); a.setXYZ(i++, ...K); a.setXYZ(i++, ...F); }
+    a.needsUpdate = true; }
   o.sh.position.x = x; o.sh.position.z = z; o.sh.material.opacity = .35 - .15 * fl;
   const tg = (f.join && f.join.tgt) || (f.chase && f.chase.tgt); o.line.visible = (f.state === "chase" || f.state === "join") && !!tg;
   if (o.line.visible){ const [px, pz] = w2t(tg.x, tg.y), a = o.line.geometry.attributes.position;
@@ -2043,10 +2125,35 @@ function draw(b, est){
   if (drawN % 3 === 0) drawEye(est);                  // 视野每 3 帧画一次,省电
 }
 const flyZ = () => Math.max(.6, S / 12);               // 画出来的果蝇大小跟着地图比例走(64 格时 = 1)
+/* ⚙ 腿的画法:一个步态相位(按走过的路程推进,步长 = 0.8 mm + 0.045 s × 速度 ⇒ 10 mm/s 时约 8 步/秒),两组三脚架相差半个周期;
+   迈步(腾空)约 35 ms,其余时间脚踩在地上往后划;原地转身按“身体转过的弧长”也在迈步。坐标单位 = 画果蝇用的像素(身长约 20 ≈ 3.3 mm,1 mm ≈ 6)。 */
+const LEGS = [[-2.4, -3.6, -7, -10.5, 0], [2.4, -3.6, 7, -10.5, 1], [-2.8, -1.2, -9.2, -1.5, 1], [2.8, -1.2, 9.2, -1.5, 0], [-2.4, 1.2, -8.2, 8.6, 0], [2.4, 1.2, 8.2, 8.6, 1]];   // 胸部挂点 x,y · 脚的中位 x,y · 属于哪组三脚架
+function gaitStep(f){                                       // 每画一帧推进一次
+  const t = f.simT || 0, odo = f.odo || 0, h = f.h || 0;
+  if (f.gT == null){ f.gT = t; f.gOdo = odo; f.gH = h; f.gph = 0; f.gv = 0; return; }
+  const dt = t - f.gT; if (dt <= 0) return;
+  const tr = (odo - f.gOdo) * 2, rot = wrap(h - f.gH) * 1.1, dmm = tr + Math.abs(rot);   // 走过的路 + 转身时脚划过的弧长(身宽约 1.1 mm)
+  f.gv += (dmm / dt - f.gv) * Math.min(1, dt / .15);                        // 画面用的速度(mm/s,平滑)
+  f.gTurn = dmm > 1e-6 ? rot / dmm : (f.gTurn || 0) * .9;                   // 这一段里转身占多少(左转为正):原地转时两侧的脚反着划
+  f.gph = (f.gph + (f.flight ? 0 : Math.min(.2, dmm / (.8 + .045 * f.gv)))) % 1; f.gT = t; f.gOdo = odo; f.gH = h; }   // 每帧最多推进 0.2 个周期,快放时不闪
+function legPose(f){                                        // 六条腿:[挂点 x, y, 膝 x, y, 脚 x, y]
+  const v = f.gv || 0, sw = Math.max(.2, Math.min(.45, .035 * v / (.8 + .045 * v))), A = Math.min(4.2, 3 * (1 - sw) * (.8 + .045 * v)) * Math.min(1, v / 1.5);   // 踩地那段划的距离 = 步长 × 踩地占的比例(脚不打滑)
+  const tf = f.gTurn || 0, fwd = f.backT > 0 ? -1 : 1;                     // 倒退时往前划;转身占的比例
+  return LEGS.map(([ax, ay, fx0, fy0, g]) => { const c = ((f.gph || 0) + g * .5) % 1, side = Math.sign(fx0);
+    const k = Math.max(-1, Math.min(1, (1 - Math.abs(tf)) * fwd + tf * side));   // 这条腿往后划(+)还是往前划(−):左转时右边的脚往后、左边的往前
+    const d = k * (c < 1 - sw ? A - 2 * A * c / (1 - sw) : -A + 2 * A * (.5 - .5 * Math.cos(Math.PI * (c - 1 + sw) / sw)));   // 踩地往后划 / 腾空往前摆
+    const lift = c < 1 - sw ? 0 : Math.sin(Math.PI * (c - 1 + sw) / sw) * .8 * Math.min(1, v / 1.5);
+    const fx = fx0 + side * lift, fy = fy0 - d, kx = (ax + fx) / 2 + side * 2.2, ky = (ay + fy) / 2;
+    return [ax, ay, kx, ky, fx, fy, lift]; }); }
 function drawFly(f, body, head){                        // 起飞时:地上一个影子、身体略放大、翅膀张开
   const fl = f.flight ? Math.sin(Math.PI * Math.min(1, f.flight.t / f.flight.T)) : 0, z = flyZ();
   if (fl > 0){ cx.fillStyle = `rgba(0,0,0,${.35 - .15 * fl})`; cx.beginPath(); cx.ellipse(sx(f.x) + 4 * z, sy(f.y) + (6 + 16 * fl) * z, 8 * z, 5 * z, 0, 0, 7); cx.fill(); }
-  cx.save(); cx.translate(sx(f.x), sy(f.y) - 10 * fl * z); cx.rotate(-f.h + Math.PI/2); cx.scale(z * (1 + .35 * fl), z * (1 + .35 * fl));
+  gaitStep(f); const sway = .03 * Math.sin(2 * Math.PI * (f.gph || 0)) * Math.min(1, (f.gv || 0) / 3);   // 走的时候身体随步子轻轻左右摆(约 ±1.7°)
+  cx.save(); cx.translate(sx(f.x), sy(f.y) - 10 * fl * z); cx.rotate(-f.h + Math.PI/2 + sway); cx.scale(z * (1 + .35 * fl), z * (1 + .35 * fl));
+  { const tk = Math.min(1, fl * 3), k = 1 - .45 * tk, kf = k * (1 - .2 * tk);   // 腿(起飞后慢慢收起、落地前慢慢放下)
+    cx.strokeStyle = "#a3968a"; cx.globalAlpha = .9 - .4 * tk; cx.lineWidth = 1.1; cx.lineCap = "round"; cx.lineJoin = "round"; cx.beginPath();
+    for (const [ax, ay, kx, ky, fx, fy] of legPose(f)){ cx.moveTo(ax, ay); cx.lineTo(ax + (kx - ax) * k, ay + (ky - ay) * k); cx.lineTo(ax + (fx - ax) * kf, ay + (fy - ay) * kf); }
+    cx.stroke(); cx.globalAlpha = 1; }
   cx.fillStyle = fl > 0 ? "rgba(236,240,250,.55)" : "rgba(236,230,220,.35)";
   const wa = .4 + 1.0 * fl, wx = 6.4 + 3.6 * fl, wy = 7.2 - 5.5 * fl;   // 翅根在胸部、翅尖往后外张开(Λ);飞起来张到两侧、略往后掠 —— 和 3D 模型一样
   cx.beginPath(); cx.ellipse(-wx, wy, 4, 10, wa, 0, 7); cx.fill(); cx.beginPath(); cx.ellipse(wx, wy, 4, 10, -wa, 0, 7); cx.fill();
@@ -2200,7 +2307,7 @@ function drawBrain(){
 function brainPick(k){                                     // 选一条通路(k = 群名去掉左右;null = 取消)
   BRV.path = k && BRP[k] ? k : null; const el = document.getElementById("brPath"); if (!el) return;
   const PP = BRV.path && BRP[BRV.path];
-  if (!PP){ el.innerHTML = k ? "这一群还没整理通路（MDN 的输入主要在腹神经索，这份数据只有脑）。" : "点大脑里亮着的一群（或展开后列表里的一行），看它背后的真实接线。"; brainList(); return; }
+  if (!PP){ el.innerHTML = k ? "这一群还没整理通路（MDN 的输入主要在腹神经索，这份数据只有脑）。" : "点大脑里亮着的一群（或下面列表里的一行），看它背后的真实接线。"; brainList(); return; }
   const nm = id => (PP.nodes.find(n => n.id === id) || {}).label || id, off = PP.nodes.some(n => n.sim === false);
   el.innerHTML = `<b>${PP.title}</b>` + (PP.edges.length ? `<ul class="bredges">` + PP.edges.slice().sort((a, b) => b.syn - a.syn).slice(0, 6)
     .map(e => `<li><span>${nm(e.a)}${/）$/.test(nm(e.a)) ? "" : "&nbsp;"}→ ${nm(e.b)}</span><span class="num${e.sg < 0 ? " neg" : e.sg === 0 ? " mod" : ""}">${e.syn.toLocaleString()} 突触${BR_SGN[e.sg] || ""}</span></li>`).join("") + "</ul>"
@@ -2215,7 +2322,7 @@ brCv.addEventListener("click", e => { if (BRV.moved > 6){ e.stopPropagation(); B
   for (const [k, g] of Object.entries(BRG)){ const bk = brBase(k); if (!BRP[bk]) continue;
     for (let i = 0; i < g.p.length; i += 3){ BRV.P(g.p, i, o); const d = Math.hypot(o[0] - x, o[1] - y); if (d < bd){ bd = d; best = bk; } } }
   for (let i = 0; i < BRKC.length; i += 3){ BRV.P(BRKC, i, o); const d = Math.hypot(o[0] - x, o[1] - y); if (d < bd){ bd = d; best = "kc"; } }
-  brainPick(best); if (best) e.stopPropagation(); });
+  brainPick(best); if (best && brCv.closest && brCv.closest(".card.open")) e.stopPropagation(); });   // 收起时点中一群:让这一下冒泡上去把卡片展开
 function brainList(){
   const act = BRV.act; if (!act) return; const box = document.getElementById("brList"); if (!box) return;
   const rows = {}; for (const [k, v] of Object.entries(act)){ const b = k.replace(/_[LR]$/, ""); rows[b] = Math.max(rows[b] || 0, v); }
